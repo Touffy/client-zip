@@ -42,7 +42,7 @@ export function normalizeInput(input: File | Response | BufferLike | StreamLike,
 }
 
 export function ReadableFromIter<T extends BufferLike>(iter: AsyncIterable<T> | AsyncIterator<T>) {
-  const gen = ("next" in iter) ? iter[Symbol.asyncIterator]() : iter
+  const gen = ("next" in iter) ? iter : iter[Symbol.asyncIterator]()
   return new ReadableStream<Uint8Array>({
     async pull(controller) {
       let pushedSize = 0
