@@ -1,6 +1,6 @@
 {
   "name": "client-zip",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A client-side streaming ZIP generator",
   "browser": "index.js",
   "module": "index.js",
