@@ -13,7 +13,7 @@ npm i client-zip
 (or just load the module from GitHub)
 
 ```javascript
-import { downloadZip } from "client-zip"
+import { downloadZip } from "../node_modules/client-zip/index.js"
 
 async function downloadTestZip() {
   // define what we want in the ZIP
