@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Bundler.js test</title>
+  <style>
+html { height: 100%; font-size: 16px; }
+body { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+button { font-size: inherit; }
+  </style>
+</head>
+<body>
+
+  <button>Download a few files in one ZIP</button>
+  <p>(including two strings a file fetched from GitHub)</p>
+
+  <script type="module" async>
+import { downloadZip } from "../index.min.js";
+    
+async function test() {
+  // an ArrayBuffer
+  const hi = new TextEncoder().encode("hello world!")
+  // an HTTP Response
+  const code = fetch("https://raw.githubusercontent.com/Touffy/client-zip/master/src/index.ts")
+  // just a string
+  const bye = "goodbye."
+
+  const blob = await downloadZip([
+    { name: "hello.txt", modDate: new Date(), input: hi },
+    code, // you don't need to specify a name and modified date for Responses and Files
+    { name: "goodbye.txt", modDate: new Date(), input: bye }
+  ]).blob()
+
+  const link = document.createElement("a")
+  link.href = URL.createObjectURL(blob)
+  link.download = "hello+goodbye.zip"
+  link.click()
+}
+
+document.getElementsByTagName("button")[0].onclick = test
+  </script>
+
+</body>
+</html>
