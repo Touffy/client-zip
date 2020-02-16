@@ -1,0 +1,29 @@
+{
+  "name": "client-zip",
+  "version": "0.1.0",
+  "description": "A client-side streaming ZIP generator",
+  "main": "index.js",
+  "module": "index.js",
+  "scripts": {
+    "start": "rollup -c"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Touffy/client-zip.git"
+  },
+  "keywords": [
+    "zip",
+    "stream",
+    "browser"
+  ],
+  "author": "David Junger <tffy@free.fr>",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^3.0.0",
+    "rollup": "^1.31.1",
+    "rollup-plugin-terser": "^5.2.0",
+    "tslib": "^1.10.0",
+    "typescript": "^3.7.5"
+  },
+  "dependencies": {}
+}

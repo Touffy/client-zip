@@ -1,0 +1,12 @@
+{
+  "compileOnSave": true,
+  "compilerOptions": {
+    "baseUrl": "src",
+    "moduleResolution": "node",
+    "module": "ES2015",
+    "target": "ES2018"
+  },
+  "files": [
+    "src/index.ts"
+  ]
+}
