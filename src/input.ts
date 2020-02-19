@@ -21,7 +21,7 @@ export function normalizeInput(input: File | Response | BufferLike | StreamLike,
   if (input instanceof File) return {
     name: name || input.name,
     modDate: modDate || new Date(input.lastModified),
-    data: BlobToBuffer(input)
+    data: input.stream()
   }
   if (input instanceof Response) return {
     name: name || new URL(input.url).pathname.split("/").pop(),
@@ -32,7 +32,7 @@ export function normalizeInput(input: File | Response | BufferLike | StreamLike,
   if (!name) throw new Error("The file must have a name.")
   if (isNaN(+modDate)) throw new Error("Invalid modification date.")
   if (typeof input === "string") return { name, modDate, data: new TextEncoder().encode(input) }
-  if (input instanceof Blob) return { name, modDate, data: BlobToBuffer(input) }
+  if (input instanceof Blob) return { name, modDate, data: input.stream() }
   if (input instanceof ArrayBuffer) return { name, modDate, data: makeUint8Array(input) }
   if (input instanceof Uint8Array) return { name, modDate, data: input }
   if (ArrayBuffer.isView(input)) return { name, modDate, data: makeUint8Array(input) }
@@ -60,14 +60,6 @@ export function ReadableFromIter<T extends BufferLike>(iter: AsyncIterable<T> | 
       }
     }
   })
-}
-
-// this is the best we can do until Blob.stream() is implemented by browsers :(
-async function BlobToBuffer(blob: Blob) {
-  const reader = new FileReader()
-  reader.readAsArrayBuffer(blob)
-  await new Promise(resolve => reader.onload = resolve)
-  return makeUint8Array(reader.result as ArrayBuffer)
 }
 
 export function normalizeChunk(chunk: BufferLike) {

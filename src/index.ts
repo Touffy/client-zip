@@ -1,7 +1,8 @@
-import { makeBuffer, makeUint8Array } from "./utils.js";
+import "./polyfills.js"
+import { makeBuffer, makeUint8Array } from "./utils.js"
 import { crc32 } from "./crc32.js"
 import { formatDOSDateTime } from "./datetime.js"
-import { ZipFileDescription, BufferLike, StreamLike, normalizeInput, ReadableFromIter } from "./input.js";
+import { ZipFileDescription, BufferLike, StreamLike, normalizeInput, ReadableFromIter } from "./input.js"
 
 /** The file name and modification date will be read from the input;
  * extra arguments can be given to override the input's metadata. */
