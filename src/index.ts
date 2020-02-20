@@ -6,15 +6,15 @@ import { ZipFileDescription, BufferLike, StreamLike, normalizeInput, ReadableFro
 
 /** The file name and modification date will be read from the input;
  * extra arguments can be given to override the input's metadata. */
-type InputWithMeta = File | Response | { input: File | Response, name?, modDate?}
+type InputWithMeta = File | Response | { input: File | Response, name?, lastModified?}
 
 /** The file name and modification must be provided with those types of input. */
-type InputWithoutMeta = { input: BufferLike | StreamLike, name, modDate }
+type InputWithoutMeta = { input: BufferLike | StreamLike, name, lastModified }
 
 async function* normalizeFiles(files: AsyncIterable<InputWithMeta | InputWithoutMeta>) {
   for await (const file of files) {
     if (file instanceof File || file instanceof Response) yield normalizeInput(file)
-    else yield normalizeInput(file.input, file.name, file.modDate)
+    else yield normalizeInput(file.input, file.name, file.lastModified)
   }
 }
 
@@ -36,33 +36,33 @@ async function* loadFiles(files: AsyncIterable<ZipFileDescription>) {
   for await (const file of files) {
     const header = fileHeader(file)
     yield header
-    yield file.name
+    yield file.encodedName
 
     // this part should be in a separate function but it's tricky, handling both data yields and CRC+size
-    let size = 0
+    let uncompressedSize = 0
     let crc = 0
-    let { data } = file
-    if ("then" in data) data = await data
-    if (data instanceof Uint8Array) {
-      yield data
-      crc = crc32(data, crc)
-      size = data.length
+    let { bytes } = file
+    if ("then" in bytes) bytes = await bytes
+    if (bytes instanceof Uint8Array) {
+      yield bytes
+      crc = crc32(bytes, crc)
+      uncompressedSize = bytes.length
     } else {
-      const reader = data.getReader()
+      const reader = bytes.getReader()
       while (true) {
         const { value, done } = await reader.read()
         if (done) break
         crc = crc32(value, crc)
-        size += value.length
+        uncompressedSize += value.length
         yield value
       }
     }
 
-    Object.assign(file, { size, crc })
+    Object.assign(file, { uncompressedSize, crc })
     centralRecord.push(centralHeader(file, offset))
-    centralRecord.push(file.name)
+    centralRecord.push(file.encodedName)
     fileCount++
-    offset += header.length + file.name.length + file.size
+    offset += header.length + file.encodedName.length + file.uncompressedSize
   }
 
   // write central repository
@@ -93,7 +93,7 @@ function fileHeader(file: ZipFileDescription) {
   header.setUint32(10, formatDOSDateTime(file.modDate))
   // leave CRC = zero (4 bytes) because we'll write it later, in the central repo
   // leave lengths = zero (2x4 bytes) because we'll write them later, in the central repo
-  header.setUint16(26, file.name.length, true)
+  header.setUint16(26, file.encodedName.length, true)
   // leave extra field length = zero (2 bytes)
   return makeUint8Array(header)
 }
@@ -107,9 +107,9 @@ function centralHeader(file: ZipFileDescription, offset: number) {
   // leave compression = zero (2 bytes) until we implement compression
   header.setUint32(12, formatDOSDateTime(file.modDate))
   header.setUint32(16, file.crc, true)
-  header.setUint32(20, file.size, true)
-  header.setUint32(24, file.size, true)
-  header.setUint16(28, file.name.length, true)
+  header.setUint32(20, file.uncompressedSize, true)
+  header.setUint32(24, file.uncompressedSize, true)
+  header.setUint16(28, file.encodedName.length, true)
   // leave extra field length = zero (2 bytes)
   // useless disk fields = zero (4 bytes)
   // useless attributes = zero (6 bytes)

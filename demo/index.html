@@ -26,9 +26,9 @@ async function test() {
   const bye = "goodbye."
 
   const blob = await downloadZip([
-    { name: "hello.txt", modDate: new Date(), input: hi },
+    { name: "hello.txt", lastModified: new Date(), input: hi },
     code, // you don't need to specify a name and modified date for Responses and Files
-    { name: "goodbye.txt", modDate: new Date(), input: bye }
+    { name: "goodbye.txt", lastModified: new Date(), input: bye }
   ]).blob()
 
   const link = document.createElement("a")
