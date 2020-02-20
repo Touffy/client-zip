@@ -11,7 +11,7 @@ module.exports = {
   plugins: [
     typescript({ exclude: [] }),
     terser({ ecma: 2018, module: true,
-      compress: { inline: 0, unsafe_arrows: true },
+      compress: { inline: 0, unsafe_arrows: true, booleans_as_integers: true },
       mangle: { reserved: ["i", "m"] } }) // i.m is the WebAssembly Memory
   ]
 }

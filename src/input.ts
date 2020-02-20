@@ -3,7 +3,7 @@ import { makeUint8Array } from "./utils.js"
 export type BufferLike = ArrayBuffer | string | ArrayBufferView
 export type StreamLike = Blob | ReadableStream<Uint8Array> | AsyncIterable<BufferLike>
 export type ZipFileDescription = {
-  name: string, modDate: Date,
+  name: Uint8Array, modDate: Date,
   data: ReadableStream<Uint8Array> | Uint8Array | Promise<Uint8Array>,
   size?: number, crc?: number // will be computed later
 }
@@ -15,28 +15,26 @@ export type ZipFileDescription = {
  * @param modDate should be a Date or timestamp or anything else that works in `new Date()`
  */
 export function normalizeInput(input: File | Response | BufferLike | StreamLike, name?, modDate?): ZipFileDescription {
-  if (name !== undefined) name = String(name)
+  if (name !== undefined && (!(name instanceof Uint8Array))) name = encodeString(name)
   if (modDate !== undefined && !(modDate instanceof Date)) modDate = new Date(modDate)
 
   if (input instanceof File) return {
-    name: name || input.name,
+    name: name || encodeString(input.name),
     modDate: modDate || new Date(input.lastModified),
     data: input.stream()
   }
   if (input instanceof Response) return {
-    name: name || new URL(input.url).pathname.split("/").pop(),
+    name: name || encodeString(new URL(input.url).pathname.split("/").pop()),
     modDate: modDate || new Date(input.headers.get("Last-Modified")),
     data: input.body
   }
 
-  if (!name) throw new Error("The file must have a name.")
+  if (!name || name.length === 0) throw new Error("The file must have a name.")
   if (isNaN(+modDate)) throw new Error("Invalid modification date.")
-  if (typeof input === "string") return { name, modDate, data: new TextEncoder().encode(input) }
+  if (typeof input === "string") return { name, modDate, data: encodeString(input) }
   if (input instanceof Blob) return { name, modDate, data: input.stream() }
-  if (input instanceof ArrayBuffer) return { name, modDate, data: makeUint8Array(input) }
-  if (input instanceof Uint8Array) return { name, modDate, data: input }
-  if (ArrayBuffer.isView(input)) return { name, modDate, data: makeUint8Array(input) }
-  if (input instanceof ReadableStream) return { name, modDate, data: input }
+  if (input instanceof Uint8Array || input instanceof ReadableStream) return { name, modDate, data: input }
+  if (input instanceof ArrayBuffer || ArrayBuffer.isView(input)) return { name, modDate, data: makeUint8Array(input) }
   if (Symbol.asyncIterator in input) return { name, modDate, data: ReadableFromIter(input) }
   throw new TypeError("Unsupported input format.")
 }
@@ -63,7 +61,11 @@ export function ReadableFromIter<T extends BufferLike>(iter: AsyncIterable<T> | 
 }
 
 export function normalizeChunk(chunk: BufferLike) {
-  if (typeof chunk === "string") return new TextEncoder().encode(chunk)
+  if (typeof chunk === "string") return encodeString(chunk)
   if (chunk instanceof Uint8Array) return chunk
   return makeUint8Array(chunk)
+}
+
+function encodeString(whatever) {
+  return new TextEncoder().encode(String(whatever))
 }

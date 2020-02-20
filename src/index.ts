@@ -34,13 +34,13 @@ async function* loadFiles(files: AsyncIterable<ZipFileDescription>) {
 
   // write files
   for await (const file of files) {
-    const [header, name] = fileHeader(file)
+    const header = fileHeader(file)
     yield header
-    yield name
+    yield file.name
 
     // this part should be in a separate function but it's tricky, handling both data yields and CRC+size
     let size = 0
-    let crc = -0x100000000
+    let crc = 0
     let { data } = file
     if ("then" in data) data = await data
     if (data instanceof Uint8Array) {
@@ -59,9 +59,10 @@ async function* loadFiles(files: AsyncIterable<ZipFileDescription>) {
     }
 
     Object.assign(file, { size, crc })
-    centralHeader(file, offset, centralRecord)
+    centralRecord.push(centralHeader(file, offset))
+    centralRecord.push(file.name)
     fileCount++
-    offset += header.length + name.length + file.size
+    offset += header.length + file.name.length + file.size
   }
 
   // write central repository
@@ -92,14 +93,12 @@ function fileHeader(file: ZipFileDescription) {
   header.setUint32(10, formatDOSDateTime(file.modDate))
   // leave CRC = zero (4 bytes) because we'll write it later, in the central repo
   // leave lengths = zero (2x4 bytes) because we'll write them later, in the central repo
-
-  const encodedName = new TextEncoder().encode(file.name)
-  header.setUint16(26, encodedName.length, true)
+  header.setUint16(26, file.name.length, true)
   // leave extra field length = zero (2 bytes)
-  return [makeUint8Array(header), makeUint8Array(encodedName)]
+  return makeUint8Array(header)
 }
 
-function centralHeader(file: ZipFileDescription, offset: number, centralRecord: ArrayBuffer[]) {
+function centralHeader(file: ZipFileDescription, offset: number) {
   const header = makeBuffer(46)
   header.setUint32(0, repoSignature)
   header.setUint16(4, 0x1503) // UNIX version 2.1
@@ -110,14 +109,11 @@ function centralHeader(file: ZipFileDescription, offset: number, centralRecord: 
   header.setUint32(16, file.crc, true)
   header.setUint32(20, file.size, true)
   header.setUint32(24, file.size, true)
-
-  const encodedName = new TextEncoder().encode(file.name)
-  header.setUint16(28, encodedName.length, true)
+  header.setUint16(28, file.name.length, true)
   // leave extra field length = zero (2 bytes)
   // useless disk fields = zero (4 bytes)
   // useless attributes = zero (6 bytes)
   header.setUint32(42, offset, true) // offset
-  centralRecord.push(makeUint8Array(header))
-  centralRecord.push(makeUint8Array(encodedName))
+  return makeUint8Array(header)
 }
 
