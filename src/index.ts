@@ -39,26 +39,23 @@ async function* loadFiles(files: AsyncIterable<ZipFileDescription>) {
     yield file.encodedName
 
     // this part should be in a separate function but it's tricky, handling both data yields and CRC+size
-    let uncompressedSize = 0
-    let crc = 0
     let { bytes } = file
     if ("then" in bytes) bytes = await bytes
     if (bytes instanceof Uint8Array) {
       yield bytes
-      crc = crc32(bytes, crc)
-      uncompressedSize = bytes.length
+      file.crc = crc32(bytes, 0)
+      file.uncompressedSize = bytes.length
     } else {
       const reader = bytes.getReader()
       while (true) {
         const { value, done } = await reader.read()
         if (done) break
-        crc = crc32(value, crc)
-        uncompressedSize += value.length
+        file.crc = crc32(value, file.crc)
+        file.uncompressedSize += value.length
         yield value
       }
     }
 
-    Object.assign(file, { uncompressedSize, crc })
     centralRecord.push(centralHeader(file, offset))
     centralRecord.push(file.encodedName)
     fileCount++

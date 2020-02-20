@@ -2,7 +2,7 @@
 
 `client-zip` concatenates multiple files (e.g. from multiple HTTP requests) into a single ZIP, in the browser, so you can let your users download all the files in one click.
 
-`client-zip` is lightweight (3.7 kB minified, 2 kB gzipped), dependency-free, and works with native ArrayBuffers and Streams to keep a low RAM footprint with a little WebAssembly for speed.
+`client-zip` is lightweight (3.5 kB minified, 1.6 kB gzipped), dependency-free, and works with native ArrayBuffers and Streams to keep a low RAM footprint with a little WebAssembly for speed.
 
 # Quick Start
 
@@ -42,7 +42,7 @@ async function downloadTestZip() {
 
 This will only work in modern browsers with [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) support (that means no IE at all). The code relies heavily on async iterables but may be transpiled down to support browsers from as far back as mid-2015, as long as they have Streams.
 
-The default release targets ES2018 and is a bare ES6 module with a WebAssembly helper.
+The default release targets ES2018 and is a bare ES6 module.
 
 # Usage
 
