@@ -18,7 +18,7 @@ import { downloadZip } from "../node_modules/client-zip/index.js"
 async function downloadTestZip() {
   // define what we want in the ZIP
   const code = fetch("https://raw.githubusercontent.com/Touffy/client-zip/master/src/index.ts")
-  const intro = { name: "intro.txt", modDate: new Date(), input: "Hello. This is the client-zip library." }
+  const intro = { name: "intro.txt", lastModified: new Date(), input: "Hello. This is the client-zip library." }
 
   // get the ZIP stream in a Blob
   const blob = await downloadZip([intro, code]).blob()
@@ -56,7 +56,7 @@ You give it an (*async* or not) iterable list of inputs. Each input can be:
 * a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File)
 * or an object with the properties:
   - `name`: the file name ; optional if your input is a File or a Response because they have relevant metadata
-  - `modDate`: last modification date of the file; again, optional for Files and Responses with a valid "Last-Modified" header
+  - `lastModified`: last modification date of the file; again, optional for Files and Responses with a valid "Last-Modified" header
   - `input`: something that contains your data; it can be a `File`, a `Blob`, a `Response`, some kind of `ArrayView` or a raw `ArrayBuffer`, a `ReadableStream<Uint8Array>` (yes, only Uint8Arrays, but most APIs give you just that type anyway), an `AsyncIterable<ArrayBuffer | ArrayView | string>`, … or just a string.
 
 The function returns a `Response` immediately. You don't need to wait for the whole ZIP to be ready. It's up to you if you want to pipe the Response somewhere (e.g. if you are using `client-zip` inside a ServiceWorker) or let the browser buffer it all in a Blob.
