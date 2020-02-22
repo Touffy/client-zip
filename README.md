@@ -10,7 +10,7 @@
 npm i client-zip
 ```
 
-(or just load the module from GitHub)
+(or just load the module [from GitHub](https://github.com/Touffy/client-zip/releases/latest/download/index.js))
 
 ```javascript
 import { downloadZip } from "../node_modules/client-zip/index.js"
