@@ -86,6 +86,7 @@ async function* fileData(file: ZipFileDescription) {
     file.crc = crc32(bytes, 0)
     file.uncompressedSize = bytes.length
   } else {
+    file.uncompressedSize = 0
     const reader = bytes.getReader()
     while (true) {
       const { value, done } = await reader.read()
