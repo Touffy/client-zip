@@ -37,24 +37,7 @@ async function* loadFiles(files: AsyncIterable<ZipFileDescription>) {
     const header = fileHeader(file)
     yield header
     yield file.encodedName
-
-    // this part should be in a separate function but it's tricky, handling both data yields and CRC+size
-    let { bytes } = file
-    if ("then" in bytes) bytes = await bytes
-    if (bytes instanceof Uint8Array) {
-      yield bytes
-      file.crc = crc32(bytes, 0)
-      file.uncompressedSize = bytes.length
-    } else {
-      const reader = bytes.getReader()
-      while (true) {
-        const { value, done } = await reader.read()
-        if (done) break
-        file.crc = crc32(value, file.crc)
-        file.uncompressedSize += value.length
-        yield value
-      }
-    }
+    yield* fileData(file)
 
     centralRecord.push(centralHeader(file, offset))
     centralRecord.push(file.encodedName)
@@ -93,6 +76,25 @@ function fileHeader(file: ZipFileDescription) {
   header.setUint16(26, file.encodedName.length, true)
   // leave extra field length = zero (2 bytes)
   return makeUint8Array(header)
+}
+
+async function* fileData(file: ZipFileDescription) {
+  let { bytes } = file
+  if ("then" in bytes) bytes = await bytes
+  if (bytes instanceof Uint8Array) {
+    yield bytes
+    file.crc = crc32(bytes, 0)
+    file.uncompressedSize = bytes.length
+  } else {
+    const reader = bytes.getReader()
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      file.crc = crc32(value, file.crc)
+      file.uncompressedSize += value.length
+      yield value
+    }
+  }
 }
 
 function centralHeader(file: ZipFileDescription, offset: number) {
