@@ -12,7 +12,7 @@ module.exports = {
     typescript({ exclude: [] }),
     terser({ ecma: 2018, module: true,
       compress: { inline: 0, unsafe_arrows: true, booleans_as_integers: true },
-      mangle: { reserved: ["i", "m"], // i.m is the WebAssembly Memory
+      mangle: { reserved: ["i", "m", "t", "c"], // i.m is the WebAssembly Memory, t and c are its exports
         properties: { regex: /^crc$|^uncompressedSize$|^modDate$|^bytes$|^encodedName$/ }}
     })
   ]
