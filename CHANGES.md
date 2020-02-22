@@ -1,3 +1,7 @@
+## 0.2.3 Fixed!
+* patch (**critical**): computed file size was *NaN* when reading from a stream
+* patch: a little mangling and refactoring again
+
 ## 0.2.2
 * patch: update README with recent changes to property names
 
