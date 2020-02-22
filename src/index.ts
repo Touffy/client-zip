@@ -23,9 +23,9 @@ export const downloadZip = (files: AsyncIterable<InputWithMeta | InputWithoutMet
   { headers: { "Content-Type": "application/zip" } }
 )
 
-const fileSignature = 0x504b0304
-const repoSignature = 0x504b0102
-const endSignature = 0x504b0506
+const fileHeaderSignature = 0x504b0304, fileHeaderLength = 30
+const centralHeaderSignature = 0x504b0102, centralHeaderLength = 46
+const endSignature = 0x504b0506, endLength = 22
 
 async function* loadFiles(files: AsyncIterable<ZipFileDescription>) {
   const centralRecord: Uint8Array[] = []
@@ -34,15 +34,14 @@ async function* loadFiles(files: AsyncIterable<ZipFileDescription>) {
 
   // write files
   for await (const file of files) {
-    const header = fileHeader(file)
-    yield header
+    yield fileHeader(file)
     yield file.encodedName
     yield* fileData(file)
 
     centralRecord.push(centralHeader(file, offset))
     centralRecord.push(file.encodedName)
     fileCount++
-    offset += header.length + file.encodedName.length + file.uncompressedSize
+    offset += fileHeaderLength + file.encodedName.length + file.uncompressedSize
   }
 
   // write central repository
@@ -53,7 +52,7 @@ async function* loadFiles(files: AsyncIterable<ZipFileDescription>) {
   }
 
   // write ending
-  const end = makeBuffer(22)
+  const end = makeBuffer(endLength)
   end.setUint32(0, endSignature)
   // skip 4 useless bytes here
   end.setUint16(8, fileCount, true)
@@ -65,8 +64,8 @@ async function* loadFiles(files: AsyncIterable<ZipFileDescription>) {
 }
 
 function fileHeader(file: ZipFileDescription) {
-  const header = makeBuffer(30)
-  header.setUint32(0, fileSignature)
+  const header = makeBuffer(fileHeaderLength)
+  header.setUint32(0, fileHeaderSignature)
   header.setUint16(4, 0x1400) // version 2.0
   header.setUint16(6, 0x0800) // flags, bit 3 on = size and CRCs will be zero
   // leave compression = zero (2 bytes) until we implement compression
@@ -99,8 +98,8 @@ async function* fileData(file: ZipFileDescription) {
 }
 
 function centralHeader(file: ZipFileDescription, offset: number) {
-  const header = makeBuffer(46)
-  header.setUint32(0, repoSignature)
+  const header = makeBuffer(centralHeaderLength)
+  header.setUint32(0, centralHeaderSignature)
   header.setUint16(4, 0x1503) // UNIX version 2.1
   header.setUint16(6, 0x1400) // version 2.0
   header.setUint16(8, 0x0800) // flags, bit 3 on
@@ -116,4 +115,3 @@ function centralHeader(file: ZipFileDescription, offset: number) {
   header.setUint32(42, offset, true) // offset
   return makeUint8Array(header)
 }
-
