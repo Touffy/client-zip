@@ -24,6 +24,7 @@ export const downloadZip = (files: AsyncIterable<InputWithMeta | InputWithoutMet
 )
 
 const fileHeaderSignature = 0x504b0304, fileHeaderLength = 30
+const descriptorSignature = 0x504b0708, descriptorLength = 16
 const centralHeaderSignature = 0x504b0102, centralHeaderLength = 46
 const endSignature = 0x504b0506, endLength = 22
 
@@ -37,11 +38,12 @@ async function* loadFiles(files: AsyncIterable<ZipFileDescription>) {
     yield fileHeader(file)
     yield file.encodedName
     yield* fileData(file)
+    yield dataDescriptor(file)
 
     centralRecord.push(centralHeader(file, offset))
     centralRecord.push(file.encodedName)
     fileCount++
-    offset += fileHeaderLength + file.encodedName.length + file.uncompressedSize
+    offset += fileHeaderLength + descriptorLength + file.encodedName.length + file.uncompressedSize
   }
 
   // write central repository
@@ -95,6 +97,15 @@ async function* fileData(file: ZipFileDescription) {
       yield value
     }
   }
+}
+
+function dataDescriptor(file: ZipFileDescription) {
+  const header = makeBuffer(16)
+  header.setUint32(0, descriptorSignature)
+  header.setUint32(0, file.crc, true)
+  header.setUint32(4, file.uncompressedSize, true)
+  header.setUint32(8, file.uncompressedSize, true)
+  return makeUint8Array(header)
 }
 
 function centralHeader(file: ZipFileDescription, offset: number) {
