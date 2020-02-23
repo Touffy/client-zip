@@ -1,4 +1,4 @@
-const m = new WebAssembly.Memory({initial:1})
+export const m = new WebAssembly.Memory({initial:1})
 const wasm = "AGFzbQEAAAABCgJgAABgAn9/AXwCCAEBaQFtAgABAwMCAAEHCQIBdAAAAWMAAQqQAQJOAQN/A0AgASEAQQAhAgNAIABBAXYgAEEBcUGghuLtfmxzIQAgAkEBaiICQQhHDQALQYD4AyABQQJ0ciAANgIAIAFBAWoiAUGAAkcNAAsLPwECfyABQX9zIQMDQCADQf8BcSACLQAAc0ECdEGA+ANyKAIAIANBCHZzIQMgAkEBaiICIABHDQALIANBf3O4Cw"
 
 const instance = new WebAssembly.Instance(
