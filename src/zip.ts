@@ -82,9 +82,9 @@ export async function* fileData(file: ZipFileDescription) {
 export function dataDescriptor(file: ZipFileDescription) {
   const header = makeBuffer(16)
   header.setUint32(0, descriptorSignature)
-  header.setUint32(0, file.crc, true)
-  header.setUint32(4, file.uncompressedSize, true)
+  header.setUint32(4, file.crc, true)
   header.setUint32(8, file.uncompressedSize, true)
+  header.setUint32(12, file.uncompressedSize, true)
   return makeUint8Array(header)
 }
 
