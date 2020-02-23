@@ -1,7 +1,7 @@
-import { makeBuffer, makeUint8Array } from "./utils.js"
-import { crc32 } from "./crc32.js"
-import { formatDOSDateTime } from "./datetime.js"
-import { ZipFileDescription } from "./input.js"
+import { makeBuffer, makeUint8Array } from "./utils"
+import { crc32 } from "./crc32"
+import { formatDOSDateTime } from "./datetime"
+import { ZipFileDescription } from "./input"
 
 const fileHeaderSignature = 0x504b0304, fileHeaderLength = 30
 const descriptorSignature = 0x504b0708, descriptorLength = 16

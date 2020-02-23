@@ -1,4 +1,4 @@
-import { makeUint8Array } from "./utils.js"
+import { makeUint8Array } from "./utils"
 
 export type BufferLike = ArrayBuffer | string | ArrayBufferView
 export type StreamLike = Blob | ReadableStream<Uint8Array> | AsyncIterable<BufferLike>

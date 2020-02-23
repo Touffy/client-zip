@@ -1,4 +1,4 @@
-import { makeBuffer } from "utils"
+import { makeBuffer } from "./utils"
 
 export function formatDOSDateTime(date: Date) {
   let dosTime = date.getUTCSeconds() >> 1

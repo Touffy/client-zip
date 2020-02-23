@@ -1,5 +1,5 @@
-import "./polyfills.js"
-import { BufferLike, StreamLike, normalizeInput, ReadableFromIter } from "./input.js"
+import "./polyfills"
+import { BufferLike, StreamLike, normalizeInput, ReadableFromIter } from "./input"
 import { loadFiles } from "./zip"
 
 /** The file name and modification date will be read from the input;
