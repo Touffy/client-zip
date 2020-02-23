@@ -1,3 +1,6 @@
+## 0.2.4 More Fixed
+* patch (**critical**): fixed infinite loop in a function that was trying to chunk large files for crc32
+
 ## 0.2.3 Fixed!
 * patch (**critical**): computed file size was *NaN* when reading from a stream
 * patch: a little mangling and refactoring again
