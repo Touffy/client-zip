@@ -10,7 +10,8 @@ t() // initialize the table of precomputed CRCs ; this takes the last 1024 bytes
 
 // Someday we'll have BYOB stream readers and encodeInto etc.
 // When that happens, we should write into this buffer directly.
-const crcBuffer = new Uint8Array(m.buffer).subarray(0, 0xFC00)
+const maxLength = 0xFC00
+const crcBuffer = new Uint8Array(m.buffer).subarray(0, maxLength)
 
 export function crc32(data: Uint8Array, crc = 0) {
   for (const part of splitBuffer(data)) {
@@ -20,13 +21,10 @@ export function crc32(data: Uint8Array, crc = 0) {
   return crc
 }
 
-const maxLength = crcBuffer.length
-
 function* splitBuffer(data: Uint8Array) {
-  let rest = data
-  while (rest.length > maxLength) {
+  while (data.length > maxLength) {
     yield data.subarray(0, maxLength)
-    rest = data.subarray(maxLength)
+    data = data.subarray(maxLength)
   }
-  if (rest.length) yield rest
+  if (data.length) yield data
 }
