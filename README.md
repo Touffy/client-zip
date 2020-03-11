@@ -36,7 +36,7 @@ async function downloadTestZip() {
 
 # Work in progress
 
-`client-zip` 0.2 is somewhat in the <abbr title="Proof of Concept">PoC</abbr> stage and does not yet support compression, encryption, or any extra fields and attributes, and does not produce ZIP64 files.
+`client-zip` 0.3 is somewhat in the <abbr title="Proof of Concept">PoC</abbr> stage and does not yet support compression, encryption, or any extra fields and attributes, and does not produce ZIP64 files.
 
 # Compatibility
 

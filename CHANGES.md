@@ -1,3 +1,7 @@
+## 0.3.0
+* minor: `input.lastModification` is now optional in all cases
+* minor: when extracting the file name from a Request, consider first the "filename" option from the "Content-Disposition" header
+
 ## 0.2.4 More Fixed
 * patch (**critical**): fixed infinite loop in a function that was trying to chunk large files for crc32
 
