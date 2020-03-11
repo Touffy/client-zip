@@ -10,7 +10,7 @@ export type ZipFileDescription = {
 
 /** The file name and modification date will be read from the input if it is a File or Response;
  * extra arguments can be given to override the input's metadata.
- * For other types of input, the `name` and `modDate` are required.
+ * For other types of input, the `name` is required and `modDate` will default to *now*.
  * @param encodedName will be coerced to string, so… whatever
  * @param modDate should be a Date or timestamp or anything else that works in `new Date()`
  */
@@ -30,7 +30,8 @@ export function normalizeInput(input: File | Response | BufferLike | StreamLike,
   }
 
   if (!encodedName || encodedName.length === 0) throw new Error("The file must have a name.")
-  if (isNaN(+modDate)) throw new Error("Invalid modification date.")
+  if (modDate === undefined) modDate = new Date()
+  else if (isNaN(modDate)) throw new Error("Invalid modification date.")
   if (typeof input === "string") return { encodedName, modDate, bytes: encodeString(input) }
   if (input instanceof Blob) return { encodedName, modDate, bytes: input.stream() }
   if (input instanceof Uint8Array || input instanceof ReadableStream) return { encodedName, modDate, bytes: input }
