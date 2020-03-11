@@ -23,10 +23,16 @@ export function normalizeInput(input: File | Response | BufferLike | StreamLike,
     modDate: modDate || new Date(input.lastModified),
     bytes: input.stream()
   }
-  if (input instanceof Response) return {
-    encodedName: encodedName || encodeString(new URL(input.url).pathname.split("/").pop()),
-    modDate: modDate || new Date(input.headers.get("Last-Modified")),
-    bytes: input.body
+  if (input instanceof Response) {
+    const contentDisposition = input.headers.get("content-disposition")
+    const filename = contentDisposition && contentDisposition.match(/;\s*filename\*?=["']?(.*?)["']?$/i)
+    const urlName = filename && filename[1] || new URL(input.url).pathname.split("/").pop()
+    const decoded = urlName && decodeURIComponent(urlName)
+    return {
+      encodedName: encodedName || encodeString(decoded || new URL(input.url).pathname.split("/").pop()),
+      modDate: modDate || new Date(input.headers.get("Last-Modified")),
+      bytes: input.body
+    }
   }
 
   if (!encodedName || encodedName.length === 0) throw new Error("The file must have a name.")
