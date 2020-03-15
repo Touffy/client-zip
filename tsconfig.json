@@ -4,7 +4,9 @@
     "baseUrl": "src",
     "moduleResolution": "node",
     "module": "ES2015",
-    "target": "ES2018"
+    "target": "ES2018",
+    "strictFunctionTypes": true,
+    "noImplicitReturns": true
   },
   "files": [
     "src/index.ts"

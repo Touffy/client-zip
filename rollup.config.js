@@ -6,10 +6,9 @@ module.exports = {
   output: {
     file: "index.js",
     format: "esm",
-    preserveModules: true,
   },
   plugins: [
-    typescript({ exclude: [] }),
+    typescript(),
     terser({ ecma: 2018, module: true,
       compress: { inline: 0, unsafe_arrows: true, booleans_as_integers: true },
       mangle: { reserved: ["i", "m", "t", "c"], // i.m is the WebAssembly Memory, t and c are its exports
