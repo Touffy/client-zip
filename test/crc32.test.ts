@@ -1,16 +1,16 @@
 const fs = require("fs")
-import { crc32, m } from "../src/crc32"
+import { crc32, memory } from "../src/crc32"
 import table from "./table"
 
 describe("The CRC32 module", () => {
   it("should precompute CRCs for each byte using the polynomial 0xEDB88320", () => {
-    const actual = new Uint32Array(m.buffer).subarray(0x3f00)
+    const actual = new Uint32Array(memory.buffer).subarray(0x3f00)
     const expected = table
     expect(actual).toEqual(expected)
   })
 
   it("should compute the correct CRC32 for an empty file", () => {
-    expect(crc32(new Uint8Array(), 0)).toEqual(0)
+    expect(crc32(new Uint8Array(0), 0)).toEqual(0)
   })
 
   it("should compute the correct CRC32 for short files", () => {

@@ -1,6 +1,6 @@
 ;; inspired by https://create.stephan-brumme.com/crc32/
 (module
-  (import "i" "m" (memory 1))
+  (memory (export "m") 1)
   ;; this function should be called once to initialize the precomputed CRC table for each byte
   (func $genTable (local $crc i32) (local $i i32) (local $j i32)
     (loop
