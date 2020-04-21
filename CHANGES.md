@@ -1,3 +1,8 @@
+
+## 1.1.0
+* minor: the WebAssembly Memory is now created inside the wasm module, resulting in a module that is easier to import and a small reduction in bundle size
+* typo: removed a little bit of duplicate code in normalizeInput's Response name handling
+
 ## 0.3.0
 * minor: `input.lastModification` is now optional in all cases
 * minor: when extracting the file name from a Request, consider first the "filename" option from the "Content-Disposition" header

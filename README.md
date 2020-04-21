@@ -2,7 +2,7 @@
 
 `client-zip` concatenates multiple files (e.g. from multiple HTTP requests) into a single ZIP, in the browser, so you can let your users download all the files in one click. It does *not* unzip existing archives.
 
-`client-zip` is lightweight (3.8 kB minified, 1.7 kB gzipped), dependency-free, and 40 times faster than JSZip.
+`client-zip` is lightweight (3.7 kB minified, 1.7 kB gzipped), dependency-free, and 40 times faster than JSZip.
 
 # Quick Start
 
