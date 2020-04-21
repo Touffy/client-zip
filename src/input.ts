@@ -29,7 +29,7 @@ export function normalizeInput(input: File | Response | BufferLike | StreamLike,
     const urlName = filename && filename[1] || new URL(input.url).pathname.split("/").pop()
     const decoded = urlName && decodeURIComponent(urlName)
     return {
-      encodedName: encodedName || encodeString(decoded || new URL(input.url).pathname.split("/").pop()),
+      encodedName: encodedName || encodeString(decoded),
       modDate: modDate || new Date(input.headers.get("Last-Modified")),
       bytes: input.body
     }

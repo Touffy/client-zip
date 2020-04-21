@@ -17,7 +17,7 @@ import { downloadZip } from "../node_modules/client-zip/index.js"
 
 async function downloadTestZip() {
   // define what we want in the ZIP
-  const code = fetch("https://raw.githubusercontent.com/Touffy/client-zip/master/src/index.ts")
+  const code = await fetch("https://raw.githubusercontent.com/Touffy/client-zip/master/src/index.ts")
   const intro = { name: "intro.txt", lastModified: new Date(), input: "Hello. This is the client-zip library." }
 
   // get the ZIP stream in a Blob
