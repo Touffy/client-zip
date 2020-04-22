@@ -1,3 +1,6 @@
+## 1.1.1
+* patch: fixed DOS date/time encoding
+* patch: fixed Invalid Date that was attributed to Responses with no Last-Modified header
 
 ## 1.1.0
 * minor: the WebAssembly Memory is now created inside the wasm module, resulting in a module that is easier to import and a small reduction in bundle size
