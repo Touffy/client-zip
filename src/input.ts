@@ -30,7 +30,7 @@ export function normalizeInput(input: File | Response | BufferLike | StreamLike,
     const decoded = urlName && decodeURIComponent(urlName)
     return {
       encodedName: encodedName || encodeString(decoded),
-      modDate: modDate || new Date(input.headers.get("Last-Modified")),
+      modDate: modDate || new Date(input.headers.get("Last-Modified") || Date.now()),
       bytes: input.body
     }
   }
