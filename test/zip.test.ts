@@ -17,7 +17,7 @@ describe("The ZIP module", () => {
   describe("the fileHeader function", () => {
     it("should make file headers", () => {
       const actual = fileHeader(file)
-      const expected = new Uint8Array(Buffer.from("504b03041400080000004e9a00000000000000000000000000000b000000", "hex"))
+      const expected = new Uint8Array(Buffer.from("504b030414000800000000109a4e0000000000000000000000000b000000", "hex"))
       expect(actual).toEqual(expected)
     })
   })
@@ -61,7 +61,7 @@ describe("The ZIP module", () => {
     it("should make central record file headers", () => {
       const offset = 0x01020304
       const actual = centralHeader(file, offset)
-      const expected = new Uint8Array(Buffer.from("504b010215031400080000004e9a00007856341240302010403020100b0000000000000000000000000004030201", "hex"))
+      const expected = new Uint8Array(Buffer.from("504b0102150314000800000000109a4e7856341240302010403020100b0000000000000000000000000004030201", "hex"))
       expect(actual).toEqual(expected)
     })
   })
