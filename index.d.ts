@@ -8,4 +8,6 @@ type InputWithMeta = File | Response | { input: File | Response, name?, lastModi
 /** The file name must be provided with those types of input, and modification date can't be guessed. */
 type InputWithoutMeta = { input: BufferLike | StreamLike, name, lastModified? }
 
-export declare function downloadZip(files: AsyncIterable<InputWithMeta | InputWithoutMeta>): Response
+type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
+
+export declare function downloadZip(files: ForAwaitable<InputWithMeta | InputWithoutMeta>): Response

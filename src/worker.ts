@@ -1,11 +1,13 @@
 import { loadFiles } from "./zip"
 
-export default (files: AsyncIterable<Response>) => new Response(
+type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
+
+export default (files: ForAwaitable<Response>) => new Response(
   ReadableFromGenerator(loadFiles(normalizeResponses(files))),
   { headers: { "Content-Type": "application/zip" } }
 )
 
-async function* normalizeResponses(inputs: AsyncIterable<Response>) {
+async function* normalizeResponses(inputs: ForAwaitable<Response>) {
   for await (const input of inputs) {
     const contentDisposition = input.headers.get("content-disposition")
     const filename = contentDisposition && contentDisposition.match(/;\s*filename\*?=["']?(.*?)["']?$/i)

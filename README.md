@@ -46,10 +46,10 @@ The default release targets ES2018 and is a bare ES6 module + an IIFE version op
 
 The module exports (and the worker script globally defines) a single function:
 ```typescript
-function downloadZip(files: AsyncIterable<InputTypes>): Response
+function downloadZip(files: ForAwaitable<InputTypes>): Response
 ```
 
-You give it an (*async* or not) iterable list of inputs. Each input can be:
+You give it an [(*async* or not) iterable a.k.a ForAwaitable](https://github.com/microsoft/TypeScript/issues/36153) list of inputs. Each input can be:
 * a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) (the worker version only accepts that)
 * a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File)
 * or an object with the properties:
@@ -58,6 +58,8 @@ You give it an (*async* or not) iterable list of inputs. Each input can be:
   - `input`: something that contains your data; it can be a `File`, a `Blob`, a `Response`, some kind of `ArrayView` or a raw `ArrayBuffer`, a `ReadableStream<Uint8Array>` (yes, only Uint8Arrays, but most APIs give you just that type anyway), an `AsyncIterable<ArrayBuffer | ArrayView | string>`, … or just a string.
 
 The function returns a `Response` immediately. You don't need to wait for the whole ZIP to be ready. It's up to you if you want to pipe the Response somewhere (e.g. if you are using `client-zip` inside a ServiceWorker) or let the browser buffer it all in a Blob.
+
+Unless your list of inputs is quite small, you should prefer generators (when zipping Files or other resources that are already available) and async generators (when zipping Responses so you can `fetch` them lazily, or other resources that are generated last-minute so you don't need to store them longer than necessary) to provide the inputs to `downloadZip`.
 
 # Comparison with JSZip
 
