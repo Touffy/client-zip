@@ -1,3 +1,6 @@
+## 1.2.1
+* patch: fixed typings that made TypeScript complain when you passed an array to downloadZip
+
 ## 1.2.0
 * minor: added a worker script alongside the ES module. It only accepts Responses as input.
 * updated README with results from my "faster-crc" experiments
