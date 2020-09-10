@@ -1,3 +1,7 @@
+## 1.2.0
+* minor: added a worker script alongside the ES module. It only accepts Responses as input.
+* updated README with results from my "faster-crc" experiments
+
 ## 1.1.1
 * patch: fixed DOS date/time encoding
 * patch: fixed Invalid Date that was attributed to Responses with no Last-Modified header
