@@ -51,7 +51,7 @@ export function fileHeader(file: ZipFileDescription) {
   header.setUint16(4, 0x1400) // version 2.0
   header.setUint16(6, 0x0800) // flags, bit 3 on = size and CRCs will be zero
   // leave compression = zero (2 bytes) until we implement compression
-  header.setUint32(10, formatDOSDateTime(file.modDate))
+  formatDOSDateTime(file.modDate, header, 10)
   // leave CRC = zero (4 bytes) because we'll write it later, in the central repo
   // leave lengths = zero (2x4 bytes) because we'll write them later, in the central repo
   header.setUint16(26, file.encodedName.length, true)
@@ -95,7 +95,7 @@ export function centralHeader(file: ZipFileDescription, offset: number) {
   header.setUint16(6, 0x1400) // version 2.0
   header.setUint16(8, 0x0800) // flags, bit 3 on
   // leave compression = zero (2 bytes) until we implement compression
-  header.setUint32(12, formatDOSDateTime(file.modDate))
+  formatDOSDateTime(file.modDate, header, 12)
   header.setUint32(16, file.crc, true)
   header.setUint32(20, file.uncompressedSize, true)
   header.setUint32(24, file.uncompressedSize, true)
