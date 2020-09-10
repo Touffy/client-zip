@@ -4,8 +4,9 @@
   "description": "A tiny and fast client-side streaming ZIP generator",
   "browser": "index.js",
   "module": "index.js",
+  "types": "index.d.ts",
   "scripts": {
-    "start": "rollup -c",
+    "start": "rollup -c && rollup -c worker.rollup.config.js",
     "test": "jest"
   },
   "repository": {

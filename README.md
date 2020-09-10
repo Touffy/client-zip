@@ -10,7 +10,9 @@
 npm i client-zip
 ```
 
-(or just load the module [from GitHub](https://github.com/Touffy/client-zip/releases/latest/download/index.js))
+(or just load the module from https://touffy.me/client-zip/index.js (includes typings header for deno) or [from GitHub](https://github.com/Touffy/client-zip/releases/latest/download/index.js))
+
+For direct usage with a ServiceWorker's `importScripts`, a [worker.js](https://touffy.me/client-zip/worker.js) file is also available alongside the module.
 
 ```javascript
 import { downloadZip } from "../node_modules/client-zip/index.js"
@@ -38,17 +40,17 @@ async function downloadTestZip() {
 
 This will only work in modern browsers with [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) support (that means no IE at all). The code relies heavily on async iterables but may be transpiled down to support browsers from as far back as mid-2015, as long as they have Streams.
 
-The default release targets ES2018 and is a bare ES6 module.
+The default release targets ES2018 and is a bare ES6 module + an IIFE version optimized for ServiceWorkers.
 
 # Usage
 
-The module exports a single function:
+The module exports (and the worker script globally defines) a single function:
 ```typescript
 function downloadZip(files: AsyncIterable<InputTypes>): Response
 ```
 
 You give it an (*async* or not) iterable list of inputs. Each input can be:
-* a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
+* a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) (the worker version only accepts that)
 * a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File)
 * or an object with the properties:
   - `name`: the file name ; optional if your input is a File or a Response because they have relevant metadata
@@ -104,6 +106,8 @@ AES and RSA encryption could be implemented quite easily with [WebCrypto](https:
 ### performance improvements
 
 The current implementation does a fair bit of ArrayBuffer copying and allocation, much of which can be avoided with brand new (and sadly not widely supported yet) browser APIs like [`TextEncoder.encodeInto`](https://encoding.spec.whatwg.org/#dom-textencoder-encodeinto), [`TextEncoderStream`](https://encoding.spec.whatwg.org/#interface-textencoderstream), [BYOB Streams](https://streams.spec.whatwg.org/#byob-readers) and [`TransformStreams`](https://streams.spec.whatwg.org/#ts-model).
+
+CRC-32 computation is, and will certainly remain, by far the largest performance bottleneck in client-zip. Currently, it is implemented with a version of Sarwate's standard algorithm in WebAssmebly. My initial experiments have shown that a naive version of the slice-by-8 algorithm runs no faster than that. I expect that slice-by-8 can ultimately quadruple the processing speed, but only if it takes advantage of the SIMD instructions in WebAssembly which, right now, are at best experimentally supported in browsers. Still, the performance gain is significant enough for client-zip that I would ship it along with the current implementation (as a fallback when SIMD is not supported).
 
 # Contributing
 
