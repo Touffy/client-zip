@@ -1,68 +1,49 @@
-const fs = require("fs")
-import { fileHeader, fileData, dataDescriptor, centralHeader } from "../src/zip"
-import { ZipFileDescription } from "../src/input"
+import { assertEquals, assertStrictEquals } from "https://deno.land/std/testing/asserts.ts"
+import { fileHeader, fileData, dataDescriptor, centralHeader } from "../src/zip.ts"
+import type { ZipFileDescription } from "../src/input.ts"
 
-const zipSpec = fs.readFileSync(__dirname + "/APPNOTE.TXT")
+const BufferFromHex = (hex: string) => new Uint8Array(Array.from(hex.matchAll(/.{2}/g), ([s]) => parseInt(s, 16)))
+
+const zipSpec = Deno.readFileSync("./test/APPNOTE.TXT")
 const specName = new TextEncoder().encode("APPNOTE.TXT")
 const specDate = new Date("2019-04-26Z")
 
-describe("The ZIP module", () => {
-  let file: ZipFileDescription = { bytes: new Uint8Array(zipSpec), encodedName: specName, modDate: specDate }
+const baseFile: ZipFileDescription = Object.freeze({ bytes: new Uint8Array(zipSpec), encodedName: specName, modDate: specDate })
 
-  afterEach(() => {
-    delete file.uncompressedSize
-    delete file.crc
-  })
+Deno.test("the ZIP fileHeader function makes file headers", () => {
+  const file = {...baseFile}
+  const actual = fileHeader(file)
+  const expected = BufferFromHex("504b030414000800000000109a4e0000000000000000000000000b000000")
+  assertEquals(actual, expected)
+})
 
-  describe("the fileHeader function", () => {
-    it("should make file headers", () => {
-      const actual = fileHeader(file)
-      const expected = new Uint8Array(Buffer.from("504b030414000800000000109a4e0000000000000000000000000b000000", "hex"))
-      expect(actual).toEqual(expected)
-    })
-  })
+Deno.test("the ZIP fileData function yields all the file's data", async () => {
+  const file = {...baseFile}
+  const actual = new Deno.Buffer()
+  for await (const chunk of fileData(file)) actual.writeSync(chunk)
+  assertEquals(actual.bytes({copy: false}), zipSpec)
+})
 
-  describe("the fileData function", () => {
-    it("should yield all the file's data", async () => {
-      const chunks = []
-      for await (const chunk of fileData(file)) chunks.push(chunk)
-      const actual = Buffer.concat(chunks)
-      expect(actual).toEqual(zipSpec)
-    })
+Deno.test("the ZIP fileData function sets the file's size and CRC properties", async () => {
+  const file = {...baseFile}
+  assertStrictEquals(file.uncompressedSize, undefined)
+  assertStrictEquals(file.crc, undefined)
+  for await (const _ of fileData(file));
+  assertStrictEquals(file.uncompressedSize, zipSpec.length)
+  assertStrictEquals(file.crc, 0xbb3afe3f)
+})
 
-    it("should set the file's size and CRC properties", async () => {
-      expect(file.uncompressedSize).toBeUndefined()
-      expect(file.crc).toBeUndefined()
-      for await (const _ of fileData(file));
-      expect(file.uncompressedSize).toEqual(zipSpec.length)
-      expect(file.crc).toEqual(0xbb3afe3f)
-    })
-  })
+Deno.test("the ZIP dataDescriptor function makes data descriptors", () => {
+  const file = {...baseFile, uncompressedSize: 0x10203040, crc: 0x12345678}
+  const actual = dataDescriptor(file)
+  const expected = new Uint8Array(BufferFromHex("504b0708785634124030201040302010"))
+  assertEquals(actual, expected)
+})
 
-  describe("the dataDescriptor function", () => {
-    beforeEach(() => {
-      file.uncompressedSize = 0x10203040
-      file.crc = 0x12345678
-    })
-
-    it("should make data descriptors", () => {
-      const actual = dataDescriptor(file)
-      const expected = new Uint8Array(Buffer.from("504b0708785634124030201040302010", "hex"))
-      expect(actual).toEqual(expected)
-    })
-  })
-
-  describe("the centralHeader function", () => {
-    beforeEach(() => {
-      file.uncompressedSize = 0x10203040
-      file.crc = 0x12345678
-    })
-
-    it("should make central record file headers", () => {
-      const offset = 0x01020304
-      const actual = centralHeader(file, offset)
-      const expected = new Uint8Array(Buffer.from("504b0102150314000800000000109a4e7856341240302010403020100b0000000000000000000000000004030201", "hex"))
-      expect(actual).toEqual(expected)
-    })
-  })
+Deno.test("the ZIP centralHeader function makes central record file headers", () => {
+  const file = {...baseFile, uncompressedSize: 0x10203040, crc: 0x12345678}
+  const offset = 0x01020304
+  const actual = centralHeader(file, offset)
+  const expected = new Uint8Array(BufferFromHex("504b0102150314000800000000109a4e7856341240302010403020100b0000000000000000000000000004030201"))
+  assertEquals(actual, expected)
 })

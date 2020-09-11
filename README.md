@@ -115,6 +115,8 @@ CRC-32 computation is, and will certainly remain, by far the largest performance
 
 If you want to play with the WebAssembly module, I recommend that you install [the WebAssembly Binary Toolkit](https://github.com/WebAssembly/wabt) using your OS's package manager rather than the version of `wat2wasm` published on `npm`.
 
+[deno](https://deno.land) runs the tests, because it's much lighter than Jest and more similar to an actual browser environment.
+
 # A note about dates
 
 The old DOS date/time format used by ZIP files is an unspecified "local time". Therefore, to ensure the best results for the end user, `client-zip` will use the client's own timezone (not UTC or something decided by the author), resulting in a ZIP archive that varies across different clients. If you write integration tests that expect an exact binary content, make sure you set the machine running the tests to the same timezone as the one that generated the expected content.

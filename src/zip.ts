@@ -1,7 +1,11 @@
-import { makeBuffer, makeUint8Array } from "./utils"
-import { crc32 } from "./crc32"
-import { formatDOSDateTime } from "./datetime"
-import { ZipFileDescription } from "./input"
+// @ts-ignore
+import { makeBuffer, makeUint8Array } from "./utils.ts"
+// @ts-ignore
+import { crc32 } from "./crc32.ts"
+// @ts-ignore
+import { formatDOSDateTime } from "./datetime.ts"
+// @ts-ignore
+import { ZipFileDescription } from "./input.ts"
 
 const fileHeaderSignature = 0x504b0304, fileHeaderLength = 30
 const descriptorSignature = 0x504b0708, descriptorLength = 16
@@ -23,7 +27,7 @@ export async function* loadFiles(files: AsyncIterable<ZipFileDescription>) {
     centralRecord.push(centralHeader(file, offset))
     centralRecord.push(file.encodedName)
     fileCount++
-    offset += fileHeaderLength + descriptorLength + file.encodedName.length + file.uncompressedSize
+    offset += fileHeaderLength + descriptorLength + file.encodedName.length + file.uncompressedSize!
   }
 
   // write central repository
@@ -72,9 +76,9 @@ export async function* fileData(file: ZipFileDescription) {
     while (true) {
       const { value, done } = await reader.read()
       if (done) break
-      file.crc = crc32(value, file.crc)
-      file.uncompressedSize += value.length
-      yield value
+      file.crc = crc32(value!, file.crc)
+      file.uncompressedSize += value!.length
+      yield value!
     }
   }
 }
@@ -82,9 +86,9 @@ export async function* fileData(file: ZipFileDescription) {
 export function dataDescriptor(file: ZipFileDescription) {
   const header = makeBuffer(16)
   header.setUint32(0, descriptorSignature)
-  header.setUint32(4, file.crc, true)
-  header.setUint32(8, file.uncompressedSize, true)
-  header.setUint32(12, file.uncompressedSize, true)
+  header.setUint32(4, file.crc!, true)
+  header.setUint32(8, file.uncompressedSize!, true)
+  header.setUint32(12, file.uncompressedSize!, true)
   return makeUint8Array(header)
 }
 
@@ -96,9 +100,9 @@ export function centralHeader(file: ZipFileDescription, offset: number) {
   header.setUint16(8, 0x0800) // flags, bit 3 on
   // leave compression = zero (2 bytes) until we implement compression
   formatDOSDateTime(file.modDate, header, 12)
-  header.setUint32(16, file.crc, true)
-  header.setUint32(20, file.uncompressedSize, true)
-  header.setUint32(24, file.uncompressedSize, true)
+  header.setUint32(16, file.crc!, true)
+  header.setUint32(20, file.uncompressedSize!, true)
+  header.setUint32(24, file.uncompressedSize!, true)
   header.setUint16(28, file.encodedName.length, true)
   // leave extra field length = zero (2 bytes)
   // useless disk fields = zero (4 bytes)

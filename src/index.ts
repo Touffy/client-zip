@@ -1,13 +1,16 @@
-import "./polyfills"
-import { BufferLike, StreamLike, normalizeInput, ReadableFromIter } from "./input"
-import { loadFiles } from "./zip"
+// @ts-ignore These are necessary to suppress the TS2691 warning
+import "./polyfills.ts"
+// @ts-ignore
+import { BufferLike, StreamLike, normalizeInput, ReadableFromIter } from "./input.ts"
+// @ts-ignore
+import { loadFiles } from "./zip.ts"
 
 /** The file name and modification date will be read from the input;
  * extra arguments can be given to override the input's metadata. */
-type InputWithMeta = File | Response | { input: File | Response, name?, lastModified?}
+type InputWithMeta = File | Response | { input: File | Response, name?: any, lastModified?: any}
 
 /** The file name must be provided with those types of input, and modification date can't be guessed. */
-type InputWithoutMeta = { input: BufferLike | StreamLike, name, lastModified? }
+type InputWithoutMeta = { input: BufferLike | StreamLike, name: any, lastModified?: any }
 
 type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
 

@@ -1,4 +1,5 @@
-import { loadFiles } from "./zip"
+// @ts-ignore
+import { loadFiles } from "./zip.ts"
 
 type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
 
@@ -13,9 +14,9 @@ async function* normalizeResponses(inputs: ForAwaitable<Response>) {
     const filename = contentDisposition && contentDisposition.match(/;\s*filename\*?=["']?(.*?)["']?$/i)
     const urlName = filename?.[1] || new URL(input.url).pathname.split("/").pop()
     yield {
-      encodedName: new TextEncoder().encode(decodeURIComponent(urlName)),
+      encodedName: new TextEncoder().encode(decodeURIComponent(urlName!)),
       modDate: new Date(input.headers.get("Last-Modified") || Date.now()),
-      bytes: input.body
+      bytes: input.body!
     }
   }
 }
@@ -24,7 +25,7 @@ function ReadableFromGenerator(gen: AsyncGenerator<Uint8Array>) {
   return new ReadableStream<Uint8Array>({
     async pull(controller) {
       let pushedSize = 0
-      while (controller.desiredSize > pushedSize) {
+      while (controller.desiredSize! > pushedSize) {
         const next = await gen.next()
         if (next.value) {
           controller.enqueue(next.value)

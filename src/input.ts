@@ -1,4 +1,5 @@
-import { makeUint8Array } from "./utils"
+// @ts-ignore
+import { makeUint8Array } from "./utils.ts"
 
 export type BufferLike = ArrayBuffer | string | ArrayBufferView
 export type StreamLike = Blob | ReadableStream<Uint8Array> | AsyncIterable<BufferLike>
@@ -14,7 +15,7 @@ export type ZipFileDescription = {
  * @param encodedName will be coerced to string, so… whatever
  * @param modDate should be a Date or timestamp or anything else that works in `new Date()`
  */
-export function normalizeInput(input: File | Response | BufferLike | StreamLike, encodedName?, modDate?): ZipFileDescription {
+export function normalizeInput(input: File | Response | BufferLike | StreamLike, encodedName?: any, modDate?: any): ZipFileDescription {
   if (encodedName !== undefined && (!(encodedName instanceof Uint8Array))) encodedName = encodeString(encodedName)
   if (modDate !== undefined && !(modDate instanceof Date)) modDate = new Date(modDate)
 
@@ -31,7 +32,7 @@ export function normalizeInput(input: File | Response | BufferLike | StreamLike,
     return {
       encodedName: encodedName || encodeString(decoded),
       modDate: modDate || new Date(input.headers.get("Last-Modified") || Date.now()),
-      bytes: input.body
+      bytes: input.body!
     }
   }
 
@@ -51,7 +52,7 @@ export function ReadableFromIter<T extends BufferLike>(iter: AsyncIterable<T> | 
   return new ReadableStream<Uint8Array>({
     async pull(controller) {
       let pushedSize = 0
-      while (controller.desiredSize > pushedSize) {
+      while (controller.desiredSize! > pushedSize) {
         const next = await gen.next()
         if (next.value) {
           const chunk = normalizeChunk(next.value)
@@ -73,6 +74,6 @@ export function normalizeChunk(chunk: BufferLike) {
   return makeUint8Array(chunk)
 }
 
-function encodeString(whatever) {
+function encodeString(whatever: unknown) {
   return new TextEncoder().encode(String(whatever))
 }
