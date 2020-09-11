@@ -6,7 +6,7 @@ const BufferFromHex = (hex: string) => new Uint8Array(Array.from(hex.matchAll(/.
 
 const zipSpec = Deno.readFileSync("./test/APPNOTE.TXT")
 const specName = new TextEncoder().encode("APPNOTE.TXT")
-const specDate = new Date("2019-04-26Z")
+const specDate = new Date("2019-04-26T02:00")
 
 const baseFile: ZipFileDescription = Object.freeze({ bytes: new Uint8Array(zipSpec), encodedName: specName, modDate: specDate })
 
