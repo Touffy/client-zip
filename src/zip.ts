@@ -1,10 +1,6 @@
-// @ts-ignore
 import { makeBuffer, makeUint8Array } from "./utils.ts"
-// @ts-ignore
 import { crc32 } from "./crc32.ts"
-// @ts-ignore
 import { formatDOSDateTime } from "./datetime.ts"
-// @ts-ignore
 import { ZipFileDescription } from "./input.ts"
 
 const fileHeaderSignature = 0x504b0304, fileHeaderLength = 30

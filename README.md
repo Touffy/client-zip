@@ -1,3 +1,5 @@
+![Test](https://github.com/Touffy/client-zip/workflows/Test/badge.svg)
+
 # What is `client-zip` ?
 
 `client-zip` concatenates multiple files (e.g. from multiple HTTP requests) into a single ZIP, in the browser, so you can let your users download all the files in one click. It does *not* unzip existing archives.

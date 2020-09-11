@@ -1,8 +1,5 @@
-// @ts-ignore These are necessary to suppress the TS2691 warning
 import "./polyfills.ts"
-// @ts-ignore
 import { BufferLike, StreamLike, normalizeInput, ReadableFromIter } from "./input.ts"
-// @ts-ignore
 import { loadFiles } from "./zip.ts"
 
 /** The file name and modification date will be read from the input;

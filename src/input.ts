@@ -1,4 +1,3 @@
-// @ts-ignore
 import { makeUint8Array } from "./utils.ts"
 
 export type BufferLike = ArrayBuffer | string | ArrayBufferView

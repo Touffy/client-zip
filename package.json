@@ -6,7 +6,9 @@
   "module": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "start": "rollup -c && rollup -c worker.rollup.config.js",
+    "start": "npm run build:module && npm run build:worker",
+    "build:module": "esbuild --target=es2018 --bundle src/index.ts --format=esm | terser --config-file terser.json --module -o index.js",
+    "build:worker": "esbuild --target=es2018 --bundle src/worker.ts --format=iife --global-name=downloadZip | terser --config-file terser.json -o worker.js",
     "test": "deno test --allow-read test/*.test.ts"
   },
   "repository": {
@@ -21,12 +23,7 @@
   "author": "David Junger <tffy@free.fr>",
   "license": "MIT",
   "devDependencies": {
-    "@rollup/plugin-typescript": "^6.0.0",
-    "rollup": "^2.26.11",
-    "rollup-plugin-terser": "^7.0.2",
-    "tslib": "^2.0.1"
-  },
-  "dependencies": {
-    "typescript": "^4.0.2"
+    "esbuild": "^0.6.34",
+    "terser": "^5.3.1"
   }
 }

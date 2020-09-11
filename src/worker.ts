@@ -1,4 +1,3 @@
-// @ts-ignore
 import { loadFiles } from "./zip.ts"
 
 type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
