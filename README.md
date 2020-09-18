@@ -2,7 +2,7 @@
 
 # What is `client-zip` ?
 
-`client-zip` concatenates multiple files (e.g. from multiple HTTP requests) into a single ZIP, in the browser, so you can let your users download all the files in one click. It does *not* unzip existing archives.
+`client-zip` concatenates multiple files (e.g. from multiple HTTP requests) into a single ZIP, in the browser, so you can let your users download all the files in one click. It does *not* compress the files or unzip existing archives.
 
 `client-zip` is lightweight (3.7 kB minified, 1.7 kB gzipped), dependency-free, and 40 times faster than JSZip.
 
@@ -113,12 +113,6 @@ The current implementation does a fair bit of ArrayBuffer copying and allocation
 
 CRC-32 computation is, and will certainly remain, by far the largest performance bottleneck in client-zip. Currently, it is implemented with a version of Sarwate's standard algorithm in WebAssmebly. My initial experiments have shown that a naive version of the slice-by-8 algorithm runs no faster than that. I expect that slice-by-8 can ultimately quadruple the processing speed, but only if it takes advantage of the SIMD instructions in WebAssembly which, right now, are at best experimentally supported in browsers. Still, the performance gain is significant enough for client-zip that I would ship it along with the current implementation (as a fallback when SIMD is not supported).
 
-# Contributing
-
-If you want to play with the WebAssembly module, I recommend that you install [the WebAssembly Binary Toolkit](https://github.com/WebAssembly/wabt) using your OS's package manager rather than the version of `wat2wasm` published on `npm`.
-
-[deno](https://deno.land) runs the tests, because it's much lighter than Jest and more similar to an actual browser environment.
-
-# A note about dates
+## A note about dates
 
 The old DOS date/time format used by ZIP files is an unspecified "local time". Therefore, to ensure the best results for the end user, `client-zip` will use the client's own timezone (not UTC or something decided by the author), resulting in a ZIP archive that varies across different clients. If you write integration tests that expect an exact binary content, make sure you set the machine running the tests to the same timezone as the one that generated the expected content.
