@@ -20,4 +20,4 @@ jobs:
           deno-version: v1.x
 
       - name: Run Tests
-        run: deno test --allow-read test/*.test.ts
+        run: deno test --allow-read test/

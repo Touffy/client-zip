@@ -9,7 +9,7 @@
     "start": "npm run build:module && npm run build:worker",
     "build:module": "esbuild --target=es2018 --bundle src/index.ts --format=esm | terser --config-file terser.json --module -o index.js",
     "build:worker": "esbuild --target=es2018 --bundle src/worker.ts --format=iife --global-name=downloadZip | terser --config-file terser.json -o worker.js",
-    "test": "deno test --allow-read test/*.test.ts"
+    "test": "deno test --allow-read test/"
   },
   "repository": {
     "type": "git",
@@ -23,7 +23,7 @@
   "author": "David Junger <tffy@free.fr>",
   "license": "MIT",
   "devDependencies": {
-    "esbuild": "^0.6.34",
-    "terser": "^5.3.1"
+    "esbuild": "^0.7.1",
+    "terser": "^5.3.2"
   }
 }

@@ -36,7 +36,7 @@ Deno.test("the ZIP fileData function sets the file's size and CRC properties", a
 Deno.test("the ZIP dataDescriptor function makes data descriptors", () => {
   const file = {...baseFile, uncompressedSize: 0x10203040, crc: 0x12345678}
   const actual = dataDescriptor(file)
-  const expected = new Uint8Array(BufferFromHex("504b0708785634124030201040302010"))
+  const expected = BufferFromHex("504b0708785634124030201040302010")
   assertEquals(actual, expected)
 })
 
@@ -44,6 +44,6 @@ Deno.test("the ZIP centralHeader function makes central record file headers", ()
   const file = {...baseFile, uncompressedSize: 0x10203040, crc: 0x12345678}
   const offset = 0x01020304
   const actual = centralHeader(file, offset)
-  const expected = new Uint8Array(BufferFromHex("504b0102150314000800000000109a4e7856341240302010403020100b0000000000000000000000000004030201"))
+  const expected = BufferFromHex("504b0102150314000800000000109a4e7856341240302010403020100b0000000000000000000000000004030201")
   assertEquals(actual, expected)
 })
