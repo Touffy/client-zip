@@ -1,3 +1,6 @@
+## TBD:
+* patch: added a few missing TypeScript annotations to avoid "Member 'name' implicitly has an 'any' type." errors in strict TypeScript settings
+
 ## 1.2.1
 * patch: fixed typings that made TypeScript complain when you passed an array to downloadZip
 
