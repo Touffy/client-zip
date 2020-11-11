@@ -1,4 +1,4 @@
-## TBD:
+## 1.2.2:
 * patch: added a few missing TypeScript annotations to avoid "Member 'name' implicitly has an 'any' type." errors in strict TypeScript settings
 
 ## 1.2.1
