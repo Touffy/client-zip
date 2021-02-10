@@ -1,3 +1,6 @@
+## 1.3.0:
+* minor: added a `Content-Disposition: attachment` header to the returned Response ; particularly useful when combined with a `form` action intercepted by a Service Worker because forms don't have a `download` attribute like links
+
 ## 1.2.2:
 * patch: added a few missing TypeScript annotations to avoid "Member 'name' implicitly has an 'any' type." errors in strict TypeScript settings
 
