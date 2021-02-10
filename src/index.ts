@@ -20,5 +20,5 @@ async function* normalizeFiles(files: ForAwaitable<InputWithMeta | InputWithoutM
 
 export const downloadZip = (files: ForAwaitable<InputWithMeta | InputWithoutMeta>) => new Response(
   ReadableFromIter(loadFiles(normalizeFiles(files))),
-  { headers: { "Content-Type": "application/zip" } }
+  { headers: { "Content-Type": "application/zip", "Content-Disposition": "attachment" } }
 )

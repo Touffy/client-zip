@@ -4,7 +4,7 @@ type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
 
 export default (files: ForAwaitable<Response>) => new Response(
   ReadableFromGenerator(loadFiles(normalizeResponses(files))),
-  { headers: { "Content-Type": "application/zip" } }
+  { headers: { "Content-Type": "application/zip", "Content-Disposition": "attachment" } }
 )
 
 async function* normalizeResponses(inputs: ForAwaitable<Response>) {
