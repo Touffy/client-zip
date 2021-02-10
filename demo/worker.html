@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ServiceWorker streaming demo</title>
+  <style>
+html { height: 100%; font-size: 16px; font-family: sans-serif; }
+body { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+p, form { width: 80vw; margin-top: 0; }
+h1 { text-align: center; font-size: 1.3rem; margin-bottom: 2rem; }
+h2 { font-size: 1rem; }
+.warn { background-color: rgb(247, 214, 202); padding: 1em; }
+button, input { font-size: inherit; }
+label { display: inline-flex; width: calc(100% - 3em); align-items: start; height: 1.5em; }
+input { color: blue; border: 0 none; padding: 0; margin: 0; border-bottom: 1px solid blue; flex-grow: 1; }
+input:invalid { color: black; border-color: gray; }
+button { line-height: 1.4em; border: 0 none; background-color: #b4c6d8; border-radius: 0.2em; padding: 0.3em 0.5em; transition: background-color 0.3s; }
+button:hover, button:active { background-color: #a6b7c9; }
+button[type=submit] { background-color: #84c6f1; }
+button[type=submit]:hover, button[type=submit]:active { background-color:  #75b4df; }
+form:invalid button[type=submit] { background-color: #dbdbdb; color: gray; }
+  </style>
+</head>
+<body>
+
+  <h1>ServiceWorker streaming demo</h1>
+  <p>This shows how you can leverage a ServiceWorker to <strong>stream</strong> without ever having to store
+    a full Blob of the ZIP in the browser.
+  </p>
+  <p>I'm doing it here by POSTing a simple form with an arbitrary number of URL fields
+    (therefore no JavaScript is needed to send the list — no <em>onsubmit</em> — but only to register the ServiceWorker
+    and clone the URL input). You could also use <em>hidden</em> fields to specify some extra URLs or headers,
+    even specify all the URLs that way to make a non-interactive form with only a submit button visible.
+  </p>
+  <p>The ServiceWorker (just 30 lines) intercepts the request, lazily fetches the URLs found in the form data
+    (all the fields named "url") with a generator, feeds that to <code>downloadZip</code> and responds
+    with <code>downloadZip</code>'s return value (which is a Response). That's it.
+    The process is only a bit more complicated that using a Blob (<a href="worker.js">look at the code</a>).
+  </p>
+  <p class="warn">Unfortunately,
+    <a href="https://bugs.webkit.org/show_bug.cgi?id=202142">an old and still unresolved bug in Safari</a>
+    bypasses the ServiceWorker as soon as the browser detects that it should download the content,
+    whether through a form or a download link.
+    It's hard to detect this bug with JavaScript (<i>fetch</i>ing the zip works as expected), so you'll
+    need to do browser detection 🤦‍♂️ and fall back to the less efficient Blob method when it's Safari.
+  </p>
+
+  <form name="download" action="downloadZip/demo.zip" method="POST">
+    <h2>URLs of documents to include in the ZIP (for cross-origin URLs, the server must send CORS headers):</h2>
+    <ol id="file-list">
+      <li><label><span>URL: </span><input type="url" name="url" required></label></li>
+    </ol>
+    <button name="more" type="button">➕ Add a URL</button>
+    <button type="reset">🧽 Clear the URLs</button>
+    <button type="submit">⤓ Download all that in one ZIP</button>
+  </form>
+
+  <template id="url-input">
+    <li>
+      <label><span>URL: </span><input type="url" name="url" required></label>
+      <button type="button" title="remove this link">❌</button>
+    </li>
+  </template>
+  
+  <script async>
+// the important part: register the ServiceWorker !
+navigator.serviceWorker.register('./worker.js')
+
+// this part implements a very simple dynamic form where you can clone and remove the basic input
+const list = document.getElementById("file-list")
+const template = document.getElementById("url-input")
+
+document.forms.download.more.onclick = () => {
+  list.appendChild(template.content.cloneNode(true))
+}
+document.forms.download.onreset = () => {
+  while (list.childElementCount > 1) list.lastElementChild.remove()
+}
+list.addEventListener("click", (event) => {
+  if (event.target.title === "remove this link") event.target.parentElement.remove()
+})
+  </script>
+
+</body>
+</html>

@@ -1,5 +1,5 @@
 node_modules
-index.js
-worker.js
+/index.js
+/worker.js
 .npmignore
 .vscode
