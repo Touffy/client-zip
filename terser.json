@@ -1,5 +1,5 @@
 {
-  "ecma": 2018,
+  "ecma": 2020,
   "compress": { "inline": 0, "unsafe_arrows": true, "booleans_as_integers": true },
   "mangle": {
     "reserved": ["m", "t", "c"],
