@@ -1,3 +1,8 @@
+## 2.0.0-rc1:
+
+* breaking: now targets ES2020 because we need BigInts, because…
+* breaking (a little): client-zip now generates ZIP64 archives!
+
 ## 1.3.1:
 * patch: the UNIX part of the external attributes was left at zero, causing some Linux setups to create files with no permissions at all ; now set to 664 (rw-rw-r)
 
