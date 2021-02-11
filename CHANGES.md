@@ -1,3 +1,8 @@
+## 2.0.0-rc1:
+
+* breaking: now targets ES2020 because we need BigInts, because…
+* breaking (a little): client-zip now generates ZIP64 archives!
+
 ## 1.3.0:
 * minor: added a `Content-Disposition: attachment` header to the returned Response ; particularly useful when combined with a `form` action intercepted by a Service Worker because forms don't have a `download` attribute like links
 
