@@ -5,7 +5,7 @@ export type StreamLike = Blob | ReadableStream<Uint8Array> | AsyncIterable<Buffe
 export type ZipFileDescription = {
   encodedName: Uint8Array, modDate: Date,
   bytes: ReadableStream<Uint8Array> | Uint8Array | Promise<Uint8Array>,
-  uncompressedSize?: number, crc?: number // will be computed later
+  uncompressedSize?: bigint, crc?: number // will be computed later
 }
 
 /** The file name and modification date will be read from the input if it is a File or Response;
