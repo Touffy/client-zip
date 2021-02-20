@@ -59,7 +59,7 @@ Deno.test("the ZIP centralHeader function makes ZIP64 central record file header
   const file = {...baseFile, uncompressedSize: 0x110203040n, crc: 0x12345678}
   const offset = 0x101020304n
   const actual = centralHeader(file, offset, true)
-  const expected = BufferFromHex("504b01022d032d000800000000109a4e78563412ffffffffffffffff0b001c0000000000000000000000ffffffff")
+  const expected = BufferFromHex("504b01022d032d000800000000109a4e78563412ffffffffffffffff0b001c000000000000000000b481ffffffff")
   assertEquals(actual, expected)
 })
 
