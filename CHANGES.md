@@ -1,3 +1,9 @@
+## 2.0.0-rc2:
+
+* minor: the worker IIFE version is now identical (accepts all the input types) ; might be useful with transferable blobs and streams.
+* Zip64 actually works now.
+* Zip64 is only used when necessary.
+
 ## 2.0.0-rc1:
 
 * breaking: now targets ES2020 because we need BigInts, because…
