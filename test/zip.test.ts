@@ -13,7 +13,7 @@ const baseFile: ZipFileDescription = Object.freeze({ bytes: new Uint8Array(zipSp
 Deno.test("the ZIP fileHeader function makes file headers", () => {
   const file = {...baseFile}
   const actual = fileHeader(file)
-  const expected = BufferFromHex("504b03042d000800000000109a4e0000000000000000000000000b002000")
+  const expected = BufferFromHex("504b03042d000800000000109a4e0000000000000000000000000b000000")
   assertEquals(actual, expected)
 })
 
@@ -35,25 +35,38 @@ Deno.test("the ZIP fileData function sets the file's size and CRC properties", a
 
 Deno.test("the ZIP dataDescriptor function makes data descriptors", () => {
   const file = {...baseFile, uncompressedSize: 0x10203040n, crc: 0x12345678}
-  const actual = dataDescriptor(file)
-  const expected = BufferFromHex("504b07087856341240302010000000004030201000000000")
+  const actual = dataDescriptor(file, false)
+  const expected = BufferFromHex("504b0708785634124030201040302010")
+  assertEquals(actual, expected)
+})
+
+Deno.test("the ZIP dataDescriptor function makes ZIP64 data descriptors", () => {
+  const file = {...baseFile, uncompressedSize: 0x110203040n, crc: 0x12345678}
+  const actual = dataDescriptor(file, true)
+  const expected = BufferFromHex("504b07087856341240302010010000004030201001000000")
   assertEquals(actual, expected)
 })
 
 Deno.test("the ZIP centralHeader function makes central record file headers", () => {
   const file = {...baseFile, uncompressedSize: 0x10203040n, crc: 0x12345678}
   const offset = 0x01020304n
-  const actual = centralHeader(file, offset)
-  const expected = BufferFromHex("504b010215032d000800000000109a4e7856341240302010403020100b0020000000000000000000000004030201")
+  const actual = centralHeader(file, offset, false)
+  const expected = BufferFromHex("504b01022d032d000800000000109a4e7856341240302010403020100b0000000000000000000000000004030201")
   assertEquals(actual, expected)
 })
 
+Deno.test("the ZIP centralHeader function makes ZIP64 central record file headers", () => {
+  const file = {...baseFile, uncompressedSize: 0x110203040n, crc: 0x12345678}
+  const offset = 0x101020304n
+  const actual = centralHeader(file, offset, true)
+  const expected = BufferFromHex("504b01022d032d000800000000109a4e78563412ffffffffffffffff0b001c0000000000000000000000ffffffff")
+  assertEquals(actual, expected)
+})
 
 Deno.test("the ZIP zip64ExtraField function makes Zip64 extra fields", () => {
   const file = {...baseFile, uncompressedSize: 0x10203040n, crc: 0x12345678}
   const offset = 0x01020304n
   const actual = zip64ExtraField(file, offset)
-  console.log(actual.buffer)
-  const expected = BufferFromHex("00011c0040302010000000004030201000000000040302010000000000000000")
+  const expected = BufferFromHex("01001800403020100000000040302010000000000403020100000000")
   assertEquals(actual, expected)
 })
