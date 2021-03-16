@@ -15,14 +15,14 @@
 npm i client-zip
 ```
 
-(or just load the module from https://touffy.me/client-zip/index.js (includes typings header for deno) or [from GitHub](https://github.com/Touffy/client-zip/releases/latest/download/index.js))
+or just load the module from your favorite CDN, like https://cdn.jsdelivr.net/npm/client-zip/index.js
 
-For direct usage with a ServiceWorker's `importScripts`, a [worker.js](https://touffy.me/client-zip/worker.js) file is also available alongside the module.
+For direct usage with a ServiceWorker's `importScripts`, a [worker.js](https://cdn.jsdelivr.net/npm/client-zip/worker.js) file is also available alongside the module.
 
 **Warning:** this example is fine for a small archive (under 500 MiB, as many browsers don't allow larger Blobs anyway). For larger files, please have a look at the [Service Worker streaming demo](https://touffy.me/client-zip/demo/worker).
 
 ```javascript
-import { downloadZip } from "../node_modules/client-zip/index.js"
+import { downloadZip } from "https://cdn.jsdelivr.net/npm/client-zip/index.js"
 
 async function downloadTestZip() {
   // define what we want in the ZIP
@@ -45,7 +45,7 @@ async function downloadTestZip() {
 
 # Compatibility
 
-This will only work in modern browsers with [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) support (that means no IE at all). The code relies heavily on async iterables and, since version 2, on BigInts, so it *will not work on anything earlier than 2020*. Version 1.x could be transpiled down to support browsers from as far back as mid-2015, as long as they have Streams.
+This will only work in modern browsers with [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) support (that means no IE at all). The code relies heavily on async iterables and, since version 2, on BigInts, so it *will not work on anything earlier than 2020*. [Version 1.x](https://www.npmjs.com/package/client-zip/v/1.3.1) could be transpiled down to support browsers from as far back as mid-2015, as long as they have Streams.
 
 The default release of version 2 targets ES2020 and is a bare ES6 module + an IIFE version optimized for ServiceWorkers. Version 1 packages were built for ES2018.
 

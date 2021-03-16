@@ -1,13 +1,9 @@
-## 2.0.0-rc2:
-
-* minor: the worker IIFE version is now identical (accepts all the input types) ; might be useful with transferable blobs and streams.
-* Zip64 actually works now.
-* Zip64 is only used when necessary.
-
-## 2.0.0-rc1:
+## 2.0.0:
 
 * breaking: now targets ES2020 because we need BigInts, because…
 * breaking (a little): client-zip now generates ZIP64 archives!
+* minor: the worker IIFE version is now identical (accepts all the input types) ; might be useful with transferable blobs and streams.
+* Zip64 is only used when necessary.
 
 ## 1.3.1:
 * patch: the UNIX part of the external attributes was left at zero, causing some Linux setups to create files with no permissions at all ; now set to 664 (rw-rw-r)
