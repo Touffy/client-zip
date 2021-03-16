@@ -100,7 +100,8 @@ export function centralHeader(file: ZipFileDescription, offset: number) {
   header.setUint16(28, file.encodedName.length, true)
   // leave extra field length = zero (2 bytes)
   // useless disk fields = zero (4 bytes)
-  // useless attributes = zero (6 bytes)
+  // useless attributes = zero (4 bytes)
+  header.setUint16(40, 0o100664, true) // UNIX regular file, permissions 664
   header.setUint32(42, offset, true) // offset
   return makeUint8Array(header)
 }

@@ -1,4 +1,7 @@
 ![Test](https://github.com/Touffy/client-zip/workflows/Test/badge.svg)
+![Size](https://badgen.net/bundlephobia/minzip/client-zip)
+![Dependencies](https://badgen.net/bundlephobia/dependency-count/client-zip)
+![Types](https://badgen.net/npm/types/client-zip)
 
 # What is `client-zip` ?
 
@@ -94,6 +97,8 @@ If you need a feature, you're very welcome to [open an issue](https://github.com
 ### extra fields
 
 Should be straightforward to implement if needed. Maybe `client-zip` should allow extending by third-party code so those extra fields can be plug-ins instead of built into the library.
+
+The UNIX permissions in external attributes (ignored by many readers, though) are hardcoded to 664, could be made configurable.
 
 ### ZIP64
 
