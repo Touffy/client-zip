@@ -1,3 +1,6 @@
+## 1.3.1:
+* patch: the UNIX part of the external attributes was left at zero, causing some Linux setups to create files with no permissions at all ; now set to 664 (rw-rw-r)
+
 ## 1.3.0:
 * minor: added a `Content-Disposition: attachment` header to the returned Response ; particularly useful when combined with a `form` action intercepted by a Service Worker because forms don't have a `download` attribute like links
 
