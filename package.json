@@ -1,14 +1,14 @@
 {
   "name": "client-zip",
-  "version": "1.3.1",
+  "version": "2.0.0-rc2",
   "description": "A tiny and fast client-side streaming ZIP generator",
   "browser": "index.js",
   "module": "index.js",
   "types": "index.d.ts",
   "scripts": {
     "start": "npm run build:module && npm run build:worker",
-    "build:module": "esbuild --target=es2018 --bundle src/index.ts --format=esm | terser --config-file terser.json --module -o index.js",
-    "build:worker": "esbuild --target=es2018 --bundle src/worker.ts --format=iife --global-name=downloadZip | terser --config-file terser.json -o worker.js",
+    "build:module": "esbuild --target=es2020 --bundle src/index.ts --format=esm | terser --config-file terser.json --module -o index.js",
+    "build:worker": "esbuild --target=es2020 --bundle src/worker.ts --format=iife --global-name=downloadZip | terser --config-file terser.json -o worker.js",
     "test": "deno test --allow-read test/"
   },
   "repository": {

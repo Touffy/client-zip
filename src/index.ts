@@ -1,6 +1,6 @@
 import "./polyfills.ts"
 import { BufferLike, StreamLike, normalizeInput, ReadableFromIter } from "./input.ts"
-import { loadFiles } from "./zip.ts"
+import { loadFiles, ForAwaitable } from "./zip.ts"
 
 /** The file name and modification date will be read from the input;
  * extra arguments can be given to override the input's metadata. */
@@ -8,8 +8,6 @@ type InputWithMeta = File | Response | { input: File | Response, name?: any, las
 
 /** The file name must be provided with those types of input, and modification date can't be guessed. */
 type InputWithoutMeta = { input: BufferLike | StreamLike, name: any, lastModified?: any }
-
-type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
 
 async function* normalizeFiles(files: ForAwaitable<InputWithMeta | InputWithoutMeta>) {
   for await (const file of files) {

@@ -7,7 +7,7 @@
 
 `client-zip` concatenates multiple files (e.g. from multiple HTTP requests) into a single ZIP, in the browser, so you can let your users download all the files in one click. It does *not* compress the files or unzip existing archives.
 
-`client-zip` is lightweight (3.7 kB minified, 1.7 kB gzipped), dependency-free, and 40 times faster than JSZip.
+`client-zip` is lightweight (4.6 kB minified, 2.1 kB gzipped), dependency-free, and 40 times faster than JSZip.
 
 # Quick Start
 
@@ -18,6 +18,8 @@ npm i client-zip
 (or just load the module from https://touffy.me/client-zip/index.js (includes typings header for deno) or [from GitHub](https://github.com/Touffy/client-zip/releases/latest/download/index.js))
 
 For direct usage with a ServiceWorker's `importScripts`, a [worker.js](https://touffy.me/client-zip/worker.js) file is also available alongside the module.
+
+**Warning:** this example is fine for a small archive (under 500 MiB, as many browsers don't allow larger Blobs anyway). For larger files, please have a look at the [Service Worker streaming demo](https://touffy.me/client-zip/demo/worker).
 
 ```javascript
 import { downloadZip } from "../node_modules/client-zip/index.js"
@@ -43,9 +45,13 @@ async function downloadTestZip() {
 
 # Compatibility
 
-This will only work in modern browsers with [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) support (that means no IE at all). The code relies heavily on async iterables but may be transpiled down to support browsers from as far back as mid-2015, as long as they have Streams.
+This will only work in modern browsers with [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) support (that means no IE at all). The code relies heavily on async iterables and, since version 2, on BigInts, so it *will not work on anything earlier than 2020*. Version 1.x could be transpiled down to support browsers from as far back as mid-2015, as long as they have Streams.
 
-The default release targets ES2018 and is a bare ES6 module + an IIFE version optimized for ServiceWorkers.
+The default release of version 2 targets ES2020 and is a bare ES6 module + an IIFE version optimized for ServiceWorkers. Version 1 packages were built for ES2018.
+
+Though in itself not a feature of client-zip, streaming through a ServiceWorker is practically a must-have for large archives. Sadly, there's an old bug in Safari that makes it impossible there.
+
+When necessary, client-zip will generate Zip64 archives. Those are not readable by every ZIP reader out there, especially with the streaming flag.
 
 # Usage
 
@@ -55,7 +61,7 @@ function downloadZip(files: ForAwaitable<InputTypes>): Response
 ```
 
 You give it an [(*async* or not) iterable a.k.a ForAwaitable](https://github.com/microsoft/TypeScript/issues/36153) list of inputs. Each input can be:
-* a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) (the worker version only accepts that)
+* a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
 * a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File)
 * or an object with the properties:
   - `name`: the file name ; optional if your input is a File or a Response because they have relevant metadata
@@ -80,9 +86,11 @@ The experiment was run 11 times for each lib with a few seconds of rest between 
 
 *For the baseline, I timed the `zip` process in my UNIX shell — clearly there is much room for improvement.
 
+Memory usage for any amount of data (when streaming using a ServiceWorker, or, in my test case, deno) will remain constant or close enough. My tests maxed out at 36.1 of RAM while processing nearly 6 GB.
+
 Now, comparing bundle size is clearly unfair because JSZip does a bunch of things that my library doesn't. Here you go anyway (sizes are shown in decimal kilobytes):
 
-|                    |    `client-zip`      |  JSZip |
+|                    |  `client-zip`@1.0.0  |  JSZip |
 |--------------------|---------------------:|-------:|
 | bundle size        |  11 kB (33× smaller) | 366 kB |
 | minified           | 3.8 kB (25× smaller) |  96 kB |
@@ -90,7 +98,9 @@ Now, comparing bundle size is clearly unfair because JSZip does a bunch of thing
 
 # Roadmap
 
-`client-zip` does not support compression, encryption, or any extra fields and attributes, and does not produce ZIP64 files. It already meets the need that sparked its creation: combining many `fetch` responses into a one-click donwload for the end user (within a total 4GB limit), so I'm calling it a 1.0 anyway.
+`client-zip` does not support compression, encryption, or any extra fields and attributes. It already meets the need that sparked its creation: combining many `fetch` responses into a one-click donwload for the end user.
+
+**New in version 2**: it now generates Zip64 archives, which increases the limit on file size to 4 Exabytes (because of JavaScript numbers) and total size to 18 Zettabytes.
 
 If you need a feature, you're very welcome to [open an issue](https://github.com/Touffy/client-zip/issues) or submit a pull request.
 
@@ -100,9 +110,9 @@ Should be straightforward to implement if needed. Maybe `client-zip` should allo
 
 The UNIX permissions in external attributes (ignored by many readers, though) are hardcoded to 664, could be made configurable.
 
-### ZIP64
+### <del>ZIP64</del>
 
-The most obviously useful feature, ZIP64 allows the archive to contain files larger than 4GB and to exceed 4GB in total. Its implementation, however, will be much easier once browsers ship [BigInt](https://tc39.es/proposal-bigint/#sec-bigint-objects)s (and TC-39 finalizes the spec in the first place) and related ArrayBuffer features. Or we could move more code to WebAssembly.
+Done.
 
 ### compression
 
