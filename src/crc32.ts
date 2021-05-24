@@ -1,12 +1,30 @@
-import { makeUint8Array } from "./utils.ts"
+import { makeUint8Array, parseWasm } from "./utils.ts"
 
-const wasm = "AGFzbQEAAAABCgJgAABgAn9/AXwDAwIAAQUDAQACBw0DAW0CAAF0AAABYwABCusCApgBAQN/A0AgASEAQQAhAgNAIABBAXYgAEEBcUGghuLtfmxzIQAgAkEBaiICQQhHDQALIAFBAnQgADYCACABQQFqIgFBgAJHDQALQQAhAQNAQQAhAgNAIAIgAXIoAgAiAEH/AXFBAnQoAgAgAEEIdnMhACACQYAIaiICIAFyIAA2AgAgAkGAOEcNAAsgAUEEaiIBQYAIRw0ACwvOAQICfwF7IAFBf3MhAUGAgAQhAkGAgAQgAGoiAEECdUECdCIDQYSABE8EQANAIAEgAigCAHP9Ef0MA////wL///8B////AP////0OQQL9qwH9DAAAAAAABAAAAAgAAAAMAAD9UCIE/RsAKAIAIAT9GwEoAgBzIAT9GwIoAgBzIAT9GwMoAgBzIQEgAkEEaiICIANHDQALCyACIABJBEADQCABQf8BcSACLQAAc0ECdCgCACABQQh2cyEBIAJBAWoiAiAASQ0ACwsgAUF/c7gL"
+const head = "AGFzbQEAAAAB"
+const test = "BQFgAAF7AwIBAAoKAQgAQQD9D/1iCw"
+const defBasic = "CwJgAABgA39/fwF8AwMCAAEFAwEAAgcNAwFtAgABdAAAAWMAAQqWAQI"
+const defSIMD = "EQNgAABgA39/fwF8YAJ/fwF8AwUEAAEAAgUDAQACBxEEAW0CAAF0AAABeAACAWMAAwqjAwQ"
+const implBasic = "SQEDfwNAIAEhAEEAIQIDQCAAQQF2IABBAXFBoIbi7X5scyEAIAJBAWoiAkEIRw0ACyABQQJ0IAA2AgAgAUEBaiIBQYACRw0ACwtKACABQX9zIQFBgIAEIAJyIQJBgIAEIABqIQADQCABQf8BcSACLQAAc0ECdCgCACABQQh2cyEBIAJBAWoiAiAASQ0ACyABQX9zuAs"
+const implSIMD = "TwEDfwNAQQAhAgNAIAIgAXIoAgAiAEH/AXFBAnQoAgAgAEEIdnMhACACQYAIaiICIAFyIAA2AgAgAkGAGEcNAAsgAUEEaiIBQYAIRw0ACwu7AQICfwF7IAFBf3MhAUGAgAQhAkGAgAQgAGoiAEECdUECdCIDQYSABE8EQANAIAEgAigCAHP9Ef0MA////wL///8B////AP////0OQQL9qwH9DAAAAAAABAAAAAgAAAAMAAD9UCIE/RsAKAIAIAT9GwEoAgBzIAT9GwIoAgBzIAT9GwMoAgBzIQEgAkEEaiICIANHDQALCyACIABJBHwgAEGAgARrIAFBf3MgAkGAgARrEAEFIAFBf3O4Cws"
 
-const instance = new WebAssembly.Instance(
-  new WebAssembly.Module(Uint8Array.from(atob(wasm), c => c.charCodeAt(0)))
-)
-const { t, c, m } = instance.exports as { t(): void, c(length: number, init: number): number, m: WebAssembly.Memory }
-t() // initialize the table of precomputed CRCs ; this takes 8 kB in the second page of Memory
+let enableSIMD = true
+try {
+  parseWasm([head, test])
+} catch(_) {
+  enableSIMD = false
+}
+
+const instance = new WebAssembly.Instance(parseWasm(
+  [head, enableSIMD ? defSIMD : defBasic, implBasic, enableSIMD ? implSIMD : ""]
+))
+const { t, c, x, m } = instance.exports as {
+  t(): void, x(): void, m: WebAssembly.Memory
+  c(length: number, init: number): number
+}
+
+t() // initialize the table of precomputed CRCs ; this takes 1 kB in the first page of Memory
+enableSIMD && x() // extend the table of precomputed CRCs ; this takes another 3 kB
+
 export const memory = m // for testing
 
 // Someday we'll have BYOB stream readers and encodeInto etc.
