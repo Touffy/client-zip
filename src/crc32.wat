@@ -20,13 +20,77 @@
       (local.tee $i (i32.add (local.get $i) (i32.const 1)))
       (br_if 0 (i32.ne (i32.const 0x100)))
     )
+    (local.set $i (i32.const 0))
+    (loop ;; now compute 7 more tables for slice-by-8
+      (local.set $j (i32.const 0))
+      (loop
+        (i32.load (i32.or (local.get $j) (local.get $i)))
+        local.tee $crc
+
+        (i32.and (i32.const 0xFF))
+        (i32.shl (i32.const 2))
+        i32.load
+
+        (i32.shr_u  (local.get $crc) (i32.const 8))
+        (local.set $crc (i32.xor))
+
+        (local.tee $j (i32.add (local.get $j) (i32.const 0x400))) ;; j++
+        (i32.or (local.get $i))
+
+        local.get $crc
+        i32.store
+        (br_if 0 (i32.ne (local.get $j) (i32.const 0x1C00)))
+      )
+      (local.tee $i (i32.add (local.get $i) (i32.const 4)))
+      (br_if 0 (i32.ne (i32.const 0x400)))
+    ) ;; in total, the tables occupy the first 8 kB of the second mem page
   )
   ;; this computes the CRC32 of what you put in the module's second page of Memory
   ;; (do not overwrite the first page!)
-  (func $crc32 (param $len i32) (param $crc i32) (result f64) (local $i i32)
+  (func $crc32 (param $len i32) (param $crc i32) (result f64) (local $i i32) (local $l8 i32)
     (local.set $crc (i32.xor (local.get $crc) (i32.const -1)))
     (local.set $i (i32.const 0x10000))
-    (local.set $len (i32.add (i32.const 0x10000) (local.get $len)))
+    (local.tee $len (i32.add (i32.const 0x10000) (local.get $len)))
+    i32.const 2
+    i32.shr_s
+    i32.const 2
+    i32.shl
+    local.tee $l8
+
+    (if (i32.ge_u (i32.const 0x10004))
+    (loop
+      (local.set $crc (i32.xor (local.get $crc) (i32.load (local.get $i))))
+
+      (i32.shr_u (local.get $crc) (i32.const 24))
+      (i32.shl (i32.const 2))
+      i32.load
+
+      (i32.shr_u (local.get $crc) (i32.const 16))
+      (i32.and (i32.const 0xFF))
+      (i32.shl (i32.const 2))
+      (i32.or (i32.const 0x0400))
+      i32.load
+      i32.xor
+
+      (i32.shr_u (local.get $crc) (i32.const 8))
+      (i32.and (i32.const 0xFF))
+      (i32.shl (i32.const 2))
+      (i32.or (i32.const 0x0800))
+      i32.load
+      i32.xor
+
+      (i32.and (local.get $crc) (i32.const 0xFF))
+      (i32.shl (i32.const 2))
+      (i32.or (i32.const 0x0C00))
+      i32.load
+      i32.xor
+
+      local.set $crc ;; store the updated CRC
+      (local.tee $i (i32.add (local.get $i) (i32.const 4)))
+      (br_if 0 (i32.ne (local.get $l8)))
+    ))
+
+    (if (i32.lt_u (local.get $i) (local.get $len))
     (loop
       (i32.and (local.get $crc) (i32.const 0xFF))
       (i32.load8_u (local.get $i))
@@ -38,7 +102,7 @@
       local.set $crc ;; store the updated CRC
       (local.tee $i (i32.add (local.get $i) (i32.const 1)))
       (br_if 0 (i32.lt_u (local.get $len)))
-    )
+    ))
     (i32.xor (local.get $crc) (i32.const -1))
     f64.convert_i32_u ;; return a positive Number
   )
