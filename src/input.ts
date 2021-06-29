@@ -3,7 +3,7 @@ import { makeUint8Array } from "./utils.ts"
 export type BufferLike = ArrayBuffer | string | ArrayBufferView
 export type StreamLike = Blob | ReadableStream<Uint8Array> | AsyncIterable<BufferLike>
 export type ZipFileDescription = {
-  encodedName: Uint8Array, modDate: Date,
+  encodedName: Uint8Array, utf8?: Uint8Array, modDate: Date,
   bytes: ReadableStream<Uint8Array> | Uint8Array | Promise<Uint8Array>,
   uncompressedSize?: bigint, crc?: number // will be computed later
 }
@@ -19,7 +19,7 @@ export function normalizeInput(input: File | Response | BufferLike | StreamLike,
   if (modDate !== undefined && !(modDate instanceof Date)) modDate = new Date(modDate)
 
   if (input instanceof File) return {
-    encodedName: encodedName || encodeString(input.name),
+    ...utf8Name(encodedName || input.name),
     modDate: modDate || new Date(input.lastModified),
     bytes: input.stream()
   }
@@ -29,7 +29,7 @@ export function normalizeInput(input: File | Response | BufferLike | StreamLike,
     const urlName = filename && filename[1] || new URL(input.url).pathname.split("/").pop()
     const decoded = urlName && decodeURIComponent(urlName)
     return {
-      encodedName: encodedName || encodeString(decoded),
+      ...utf8Name(encodedName || decoded),
       modDate: modDate || new Date(input.headers.get("Last-Modified") || Date.now()),
       bytes: input.body!
     }
@@ -38,11 +38,11 @@ export function normalizeInput(input: File | Response | BufferLike | StreamLike,
   if (!encodedName || encodedName.length === 0) throw new Error("The file must have a name.")
   if (modDate === undefined) modDate = new Date()
   else if (isNaN(modDate)) throw new Error("Invalid modification date.")
-  if (typeof input === "string") return { encodedName, modDate, bytes: encodeString(input) }
-  if (input instanceof Blob) return { encodedName, modDate, bytes: input.stream() }
-  if (input instanceof Uint8Array || input instanceof ReadableStream) return { encodedName, modDate, bytes: input }
-  if (input instanceof ArrayBuffer || ArrayBuffer.isView(input)) return { encodedName, modDate, bytes: makeUint8Array(input) }
-  if (Symbol.asyncIterator in input) return { encodedName, modDate, bytes: ReadableFromIter(input) }
+  if (typeof input === "string") return { ...utf8Name(encodedName), modDate, bytes: encodeString(input) }
+  if (input instanceof Blob) return { ...utf8Name(encodedName), modDate, bytes: input.stream() }
+  if (input instanceof Uint8Array || input instanceof ReadableStream) return { ...utf8Name(encodedName), modDate, bytes: input }
+  if (input instanceof ArrayBuffer || ArrayBuffer.isView(input)) return { ...utf8Name(encodedName), modDate, bytes: makeUint8Array(input) }
+  if (Symbol.asyncIterator in input) return { ...utf8Name(encodedName), modDate, bytes: ReadableFromIter(input) }
   throw new TypeError("Unsupported input format.")
 }
 
@@ -75,4 +75,23 @@ export function normalizeChunk(chunk: BufferLike) {
 
 function encodeString(whatever: unknown) {
   return new TextEncoder().encode(String(whatever))
+}
+
+function utf8Name(whatever: unknown): {encodedName: Uint8Array, utf8?: Uint8Array} {
+  let name = String(whatever);
+  if (whatever instanceof Uint8Array) {
+    name = new TextDecoder().decode(whatever);
+  }
+
+  // the name has utf8 chars
+  if (/[^\u0000-\u007f]/.test(name)) {
+    return {
+      utf8: encodeString(name),
+      encodedName: encodeString(
+        name.normalize('NFD') // normalize => decomposes combined graphemes into the combination of simple ones
+            .replace(/[^\x00-\x7F]/g, "") // remove all non ascii char
+      )
+    }
+  }
+  return {encodedName: encodeString(name)}
 }
