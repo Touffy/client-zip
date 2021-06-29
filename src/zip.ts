@@ -36,6 +36,7 @@ export async function* loadFiles(files: ForAwaitable<ZipFileDescription>) {
     }
     if (file.utf8) {
       centralRecord.push(unicodePathExtraField(file))
+      centralRecord.push(file.utf8);
     }
     fileCount++
     offset += BigInt(fileHeaderLength + descriptorLength + file.encodedName.length) + file.uncompressedSize!
@@ -158,11 +159,6 @@ export function zip64ExtraField(file: ZipFileDescription, offset: bigint) {
 }
 
 export function unicodePathExtraField(file: ZipFileDescription) {
-  if (!file.utf8) {
-    // make typescript compiler happy
-    throw new Error('file.utf8 must be set')
-  }
-
   // Value         Size        Description
   // -----         ----        -----------
   // 0x7075        Short       tag for this extra block type ("up")
@@ -173,14 +169,9 @@ export function unicodePathExtraField(file: ZipFileDescription) {
 
   const header = makeBuffer(unicodeHeaderLength)
   header.setUint16(0, 0x7075, true)
-  header.setUint16(2, unicodeHeaderLength - 4 + file.utf8.byteLength, true)
+  header.setUint16(2, unicodeHeaderLength - 4 + file!.utf8!.byteLength, true)
   header.setUint8(4, 1)
-  header.setUint32(5, crc32(file.encodedName), true)
+  header.setUint32(5, crc32(file!.encodedName), true)
 
-  // concat the UnicodeName
-  const headerA = makeUint8Array(header)
-  const field = new Uint8Array(headerA.byteLength + file.utf8.byteLength)
-  field.set(new Uint8Array(headerA), 0);
-  field.set(new Uint8Array(file.utf8), headerA.byteLength)
-  return field
+  return makeUint8Array(header)
 }

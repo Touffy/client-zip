@@ -1,5 +1,5 @@
 import { assertEquals, assertStrictEquals } from "https://deno.land/std/testing/asserts.ts"
-import { fileHeader, fileData, dataDescriptor, centralHeader, zip64ExtraField } from "../src/zip.ts"
+import { fileHeader, fileData, dataDescriptor, centralHeader, zip64ExtraField, unicodePathExtraField } from "../src/zip.ts"
 import type { ZipFileDescription } from "../src/input.ts"
 
 const BufferFromHex = (hex: string) => new Uint8Array(Array.from(hex.matchAll(/.{2}/g), ([s]) => parseInt(s, 16)))
@@ -68,5 +68,12 @@ Deno.test("the ZIP zip64ExtraField function makes Zip64 extra fields", () => {
   const offset = 0x01020304n
   const actual = zip64ExtraField(file, offset)
   const expected = BufferFromHex("01001800403020100000000040302010000000000403020100000000")
+  assertEquals(actual, expected)
+})
+
+Deno.test("the ZIP unicodePathExtraField function makes unicode path extra field", () => {
+  const file = {...baseFile, utf8: new TextEncoder().encode("ÀPPNôTE.TXT")}
+  const actual = unicodePathExtraField(file)
+  const expected = BufferFromHex("7570120001bae4630b")
   assertEquals(actual, expected)
 })
