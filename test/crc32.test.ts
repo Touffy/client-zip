@@ -4,8 +4,8 @@ import { crc32, memory } from "../src/crc32.ts"
 const table = await Deno.readFile("./test/table.array")
 
 Deno.test("the CRC32 module precomputes CRCs for each byte using the polynomial 0xEDB88320", () => {
-  const actual = new Uint8Array(memory.buffer.slice(0, 0x0400))
-  const expected = table.slice(0, 0x400)
+  const actual = new Uint8Array(memory.buffer).subarray(0, 0x1000)
+  const expected = table.subarray(0, 0x1000)
   assertEquals(actual, expected)
 })
 
