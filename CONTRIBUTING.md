@@ -64,7 +64,7 @@ or new properties for the input objects. Try to stay backwards-compatible and fu
 
 Think twice before you add a runtime dependency. It's pretty nice not to have any.
 
-If you add an internal class or basic object interface, add its propertiy names to the Terser option `mangle.properties.regex` and make sure there is no collision with native property names or the public API of `downloadZip`.
+If you add an internal class or basic object interface, add its property names to the Terser option `mangle.properties.regex` and make sure there is no collision with native property names or the public API of `downloadZip`.
 
 I don't want the source code to become more convoluted just for the sake of better minification, but I am proud of the tiny bundle size and I hope you share the sentiment.
 

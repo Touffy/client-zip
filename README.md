@@ -9,6 +9,12 @@
 
 `client-zip` is lightweight (4.6 kB minified, 2.1 kB gzipped), dependency-free, and 40 times faster than JSZip.
 
+* [Quick Start](#Quick-Start)
+* [Compatibility](#Compatibility)
+* [Usage](#Usage)
+* [Benchmarks](#Benchmarks)
+* [Roadmap](#Roadmap)
+
 # Quick Start
 
 ```sh
@@ -72,29 +78,40 @@ The function returns a `Response` immediately. You don't need to wait for the wh
 
 Unless your list of inputs is quite small, you should prefer generators (when zipping Files or other resources that are already available) and async generators (when zipping Responses so you can `fetch` them lazily, or other resources that are generated last-minute so you don't need to store them longer than necessary) to provide the inputs to `downloadZip`.
 
-# Comparison with JSZip
+# Benchmarks
 
-I started this project because I wasn't impressed with what appears to be the only other ZIP library for browsers, [JSZip](https://stuk.github.io/jszip/). The JSZip website acknowledges its performance limitations, but now we can actually quantify them.
+I started this project because I wasn't impressed with what appeared to be the only other ZIP library for browsers, [JSZip](https://stuk.github.io/jszip/). The JSZip website acknowledges its performance limitations, but now we can actually quantify them. I later found other libraries, which I've included in the new benchmarks.
 
-I requested Blob outputs from both JSZip and `client-zip`, and neither is doing compression. I measured the time until the blob was ready, in Safari on my MacBook Pro. Sounds fair?
+I requested Blob outputs from each lib, without compression. I measured the time until the blob was ready, in Safari on my MacBook Pro. Sounds fair?
 
-|                       | baseline* | `client-zip`@1.0.0 |    JSZip@3.2.2   |
-|-----------------------|----------:|-------------------:|-----------------:|
-| zip 7 files (48.3 MB) |      5 ms |       360 ms (±10) | 14 686 ms (±102) |
+|                                           | baseline* | `client-zip`@2.0.0 | fflate@0.7.1 | conflux@3 | JSZip@3.6  |
+|-------------------------------------------|----------:|-------------------:|-------------:|----------:|-----------:|
+| 48.3 MB with 7 files                      |      5 ms |       360 ms (±10) |        ? |       ? | 14 686 ms (±102) |
+| 310.6 MB with 37 photos and a short video |  1 559 ms |           2 527 ms |     2 621 ms |  2 934 ms | 126 205 ms |
+| same 310.6 MB dataset but in Chrome       |  1 559 ms |           4 328 ms |     2 244 ms |  4 816 ms | 106 018 ms |
+| 137.3 MB with 12 212 small TGA graphics   |  1 954 ms |          18 190 ms |    16 183 ms | 17 831 ms | too long ! |
+| same 137.3 MB dataset in Chrome           |  1 954 ms |        too long ! |   too long ! | too long ! | too long ! |
 
-The experiment was run 11 times for each lib with a few seconds of rest between each run, with the same files: 5 PNGs, a text file and an ugly 40 MB PDF. The first run was a little longer for both and not counted in the aggregate. The other ten runs were quite consistent. I am no statistician but it looks very much like client-zip is **over 40 times faster** than JSZip 😜
+The experiments were run about 10 times for each lib and each dataset with a few seconds of rest between each run, except JSZip for all but the first experiment because I did not have the patience. The number in the table is the median. I am no statistician but (based on the first line, where I have stable measurements for both) it looks very much like client-zip is **over 40 times faster** than JSZip 😜
 
 *For the baseline, I timed the `zip` process in my UNIX shell — clearly there is much room for improvement.
 
-Memory usage for any amount of data (when streaming using a ServiceWorker, or, in my test case, deno) will remain constant or close enough. My tests maxed out at 36.1 of RAM while processing nearly 6 GB.
+The files were served over HTTP/1.1 by nginx running on localhost, with cache enabled (not that it makes a difference). The overhead of HTTP (not network, just having to go through the layers) really shows in the dataset with 12k files.
 
-Now, comparing bundle size is clearly unfair because JSZip does a bunch of things that my library doesn't. Here you go anyway (sizes are shown in decimal kilobytes):
+It's interesting that Chrome performs so much worse than Safari with client-zip and conflux, the two libraries that rely on WHATWG Streams and (in my case) async iterables, whereas it shows better runtimes with fflate (slightly) and JSZip (by a lot, though it may be a fluke as I did not repeat the 2-minutes long experiment), both of which use synchronous code with callbacks.
 
-|                    |  `client-zip`@1.0.0  |  JSZip |
-|--------------------|---------------------:|-------:|
-| bundle size        |  11 kB (33× smaller) | 366 kB |
-| minified           | 3.8 kB (25× smaller) |  96 kB |
-| minified + gzipped | 1.7 kB (16× smaller) |  27 kB |
+Finally, I tried to run the experiment with 12k small files in Chrome, but it didn't finish after a few minutes so I gave up. Perhaps something to do with an inefficient handling of HTTP requests (I did disable network logging and enable network cache, but saw no impovement).
+
+Memory usage for any amount of data (when streaming using a ServiceWorker, or, in my test case for Zip64, deno) will remain constant or close enough. My tests maxed out at 36.1 MB of RAM while processing nearly 6 GB.
+
+Now, comparing bundle size is clearly unfair because the others do a bunch of things that my library doesn't. Here you go anyway (sizes are shown in decimal kilobytes):
+
+|                    | `client-zip`@2.0.0 | fflate@0.7.1 | conflux@3 | JSZip@3.6 |
+|--------------------|-------------------:|-------------:|----------:|----------:|
+| minified           |             4.6 kB |        29 kB |    185 kB |     96 kB |
+| minified + gzipped |             2.1 kB |        11 kB |     53 kB |     27 kB |
+
+The datasets I used in the new tests are not public domain, but nothing sensitive either ; I can send them if you ask.
 
 # Roadmap
 
