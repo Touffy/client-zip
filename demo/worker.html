@@ -37,9 +37,9 @@ form:invalid button[type=submit] { background-color: #dbdbdb; color: gray; }
     with <code>downloadZip</code>'s return value (which is a Response). That's it.
     The process is only a bit more complicated that using a Blob (<a href="worker.js">look at the code</a>).
   </p>
-  <p class="warn">Unfortunately,
-    <a href="https://bugs.webkit.org/show_bug.cgi?id=202142">an old and still unresolved bug in Safari</a>
-    bypasses the ServiceWorker as soon as the browser detects that it should download the content,
+  <p class="warn">Until <a href="https://webkit.org/blog/12176/release-notes-for-safari-technology-preview-138/">Safari Technology Preview 138</a>,
+    <a href="https://bugs.webkit.org/show_bug.cgi?id=202142">an old bug in Safari</a>
+    bypassed the ServiceWorker as soon as the browser detected that it should download the content,
     whether through a form or a download link.
     It's hard to detect this bug with JavaScript (<i>fetch</i>ing the zip works as expected), so you'll
     need to do browser detection 🤦‍♂️ and fall back to the less efficient Blob method when it's Safari.

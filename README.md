@@ -55,7 +55,7 @@ This will only work in modern browsers with [`ReadableStream`](https://developer
 
 The default release of version 2 targets ES2020 and is a bare ES6 module + an IIFE version optimized for ServiceWorkers. Version 1 packages were built for ES2018.
 
-Though in itself not a feature of client-zip, streaming through a ServiceWorker is practically a must-have for large archives. Sadly, there's an old bug in Safari that makes it impossible there.
+Though in itself not a feature of client-zip, streaming through a ServiceWorker is practically a must-have for large archives. Sadly, there's an old bug in Safari that made it impossible there until Technology Preview 138 (released 20 jan. 2022).
 
 When necessary, client-zip will generate Zip64 archives. Those are not readable by every ZIP reader out there, especially with the streaming flag.
 
