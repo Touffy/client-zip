@@ -11,3 +11,7 @@ type InputWithoutMeta = { input: BufferLike | StreamLike, name: any, lastModifie
 type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
 
 export declare function downloadZip(files: ForAwaitable<InputWithMeta | InputWithoutMeta>): Response
+
+/** Load the SIMD-enabled CRC32 module for improved performance.
+ * @param url the location of the crc32x4.wasm file ; by default, it should be next to the client-zip index */
+export declare function useSimd(url?: string | URL): Promise<void>

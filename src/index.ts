@@ -1,6 +1,7 @@
 import "./polyfills.ts"
 import { BufferLike, StreamLike, normalizeInput, ReadableFromIter } from "./input.ts"
 import { loadFiles, ForAwaitable } from "./zip.ts"
+export { useSimd } from "./crc32.ts"
 
 /** The file name and modification date will be read from the input;
  * extra arguments can be given to override the input's metadata. */

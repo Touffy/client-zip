@@ -61,7 +61,7 @@ When necessary, client-zip will generate Zip64 archives. Those are not readable 
 
 # Usage
 
-The module exports (and the worker script globally defines) a single function:
+The module exports (and the worker script globally defines) this function:
 ```typescript
 function downloadZip(files: ForAwaitable<InputTypes>): Response
 ```
@@ -77,6 +77,21 @@ You give it an [(*async* or not) iterable a.k.a ForAwaitable](https://github.com
 The function returns a `Response` immediately. You don't need to wait for the whole ZIP to be ready. It's up to you if you want to pipe the Response somewhere (e.g. if you are using `client-zip` inside a ServiceWorker) or let the browser buffer it all in a Blob.
 
 Unless your list of inputs is quite small, you should prefer generators (when zipping Files or other resources that are already available) and async generators (when zipping Responses so you can `fetch` them lazily, or other resources that are generated last-minute so you don't need to store them longer than necessary) to provide the inputs to `downloadZip`.
+
+### Setting up vector processing for CRC32
+
+There is a second export from the module:
+```typescript
+function useSimd(url?: string | URL): Promise<void>
+```
+
+**Warning**: it may reject! You should catch errors, and log them in dev mode until you fix the URL or hosting configuration.
+
+When you call that function, it will feature test for SIMD instructions in WebAssembly, and if that succeeds, it will attempt to replace the CRC32 module with another one that's almost 30% faster (in Deno, at least), for all current and future uses of `downloadZip`.
+
+You may call `useSimd` at any point (but preferably early and only once). By default it will look for a file named "crc32x4.wasm" in the same location as `import.meta.url`, which works when loading the library from a CDN but not necessarily if you bundle the library code into your app or "vendor" script. That's why you can pass a URL argument to `useSimd` (it will fetch the WASM from there instead ; depending on your setup you might want to copy the file to some static storage, or point to a CDN).
+
+The IIFE worker script does *not* expose `useSimd` ; instead it calls it immediately with no argument. So if you host "worker.js", make sure "crc32x4.wasm" is served right next to it.
 
 # Benchmarks
 
@@ -96,20 +111,22 @@ The experiments were run about 10 times for each lib and each dataset with a few
 
 *For the baseline, I timed the `zip` process in my UNIX shell — clearly there is much room for improvement.
 
-The files were served over HTTP/1.1 by nginx running on localhost, with cache enabled (not that it makes a difference). The overhead of HTTP (not network, just having to go through the layers) really shows in the dataset with 12k files.
+The files were served over HTTP by nginx running on localhost, with cache enabled (not that it makes a difference).
 
-It's interesting that Chrome performs so much worse than Safari with client-zip and conflux, the two libraries that rely on WHATWG Streams and (in my case) async iterables, whereas it shows better runtimes with fflate (slightly) and JSZip (by a lot, though it may be a fluke as I did not repeat the 2-minutes long experiment), both of which use synchronous code with callbacks.
+It's interesting that Chrome performs so much worse than Safari with client-zip and conflux, the two libraries that rely on WHATWG Streams and (in my case) async iterables, whereas it shows better runtimes with fflate (slightly) and JSZip (by a lot, though it may be a fluke as I did not repeat the experiment), both of which use synchronous code with callbacks. Shame on you, Chrome.
 
-Finally, I tried to run the experiment with 12k small files in Chrome, but it didn't finish after a few minutes so I gave up. Perhaps something to do with an inefficient handling of HTTP requests (I did disable network logging and enable network cache, but saw no impovement).
+Also of note, using the SIMD-enabled CRC32 implementation in Chrome did not improve the overall performance of client-zip, suggesting that Chrome creates a bottleneck somewhere else.
+
+Finally, I tried to run the experiment with 12k small files in Chrome, but it was extremely slow. Perhaps something to do with an inefficient handling of so many HTTP requests (I did disable network logging and enable cache, but saw no impovement).
 
 Memory usage for any amount of data (when streaming using a ServiceWorker, or, in my test case for Zip64, deno) will remain constant or close enough. My tests maxed out at 36.1 MB of RAM while processing nearly 6 GB.
 
 Now, comparing bundle size is clearly unfair because the others do a bunch of things that my library doesn't. Here you go anyway (sizes are shown in decimal kilobytes):
 
-|                    | `client-zip`@2.0.0 | fflate@0.7.1 | conflux@3 | JSZip@3.6 |
+|                    | `client-zip`@2.1.0 | fflate@0.7.1 | conflux@3 | JSZip@3.6 |
 |--------------------|-------------------:|-------------:|----------:|----------:|
-| minified           |             4.6 kB |        29 kB |    185 kB |     96 kB |
-| minified + gzipped |             2.1 kB |        11 kB |     53 kB |     27 kB |
+| minified           |             5.0 kB |        29 kB |    185 kB |     96 kB |
+| minified + gzipped |             2.5 kB |        11 kB |     53 kB |     27 kB |
 
 The datasets I used in the new tests are not public domain, but nothing sensitive either ; I can send them if you ask.
 
