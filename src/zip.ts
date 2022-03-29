@@ -7,11 +7,12 @@ const fileHeaderSignature = 0x504b_0304, fileHeaderLength = 30
 const descriptorSignature = 0x504b_0708, descriptorLength = 16
 const centralHeaderSignature = 0x504b_0102, centralHeaderLength = 46
 const endSignature = 0x504b_0506, endLength = 22
-const zip64HeaderLength = 28
 const zip64endRecordSignature = 0x504b_0606, zip64endRecordLength = 56
 const zip64endLocatorSignature = 0x504b_0607, zip64endLocatorLength = 20
 
 export type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
+
+type Zip64FieldLength = 0 | 12 | 28
 
 export async function* loadFiles(files: ForAwaitable<ZipFileDescription>) {
   const centralRecord: Uint8Array[] = []
@@ -24,18 +25,18 @@ export async function* loadFiles(files: ForAwaitable<ZipFileDescription>) {
     yield fileHeader(file)
     yield file.encodedName
     yield* fileData(file)
-    const fileNeedsZip64 = file.uncompressedSize! >= 0xffffffffn || offset >= 0xffffffffn
-    yield dataDescriptor(file, fileNeedsZip64)
-    
-    centralRecord.push(centralHeader(file, offset, fileNeedsZip64))
+    const bigFile = file.uncompressedSize! >= 0xffffffffn
+    const bigOffset = offset >= 0xffffffffn
+    const zip64HeaderLength = (+bigOffset * 12 | +bigFile * 28) as Zip64FieldLength
+    yield dataDescriptor(file, bigFile)
+
+    centralRecord.push(centralHeader(file, offset, zip64HeaderLength))
     centralRecord.push(file.encodedName)
-    if (fileNeedsZip64) {
-      centralRecord.push(zip64ExtraField(file, offset))
-      offset += 8n
-    }
+    if (zip64HeaderLength) centralRecord.push(zip64ExtraField(file, offset, zip64HeaderLength))
+    if (bigFile) offset += 8n // because the data descriptor will have 64-bit sizes
     fileCount++
     offset += BigInt(fileHeaderLength + descriptorLength + file.encodedName.length) + file.uncompressedSize!
-    archiveNeedsZip64 ||= fileNeedsZip64
+    archiveNeedsZip64 ||= bigFile
   }
 
   // write central repository
@@ -123,7 +124,7 @@ export function dataDescriptor(file: ZipFileDescription, needsZip64: boolean) {
   return makeUint8Array(header)
 }
 
-export function centralHeader(file: ZipFileDescription, offset: bigint, needsZip64: boolean) {
+export function centralHeader(file: ZipFileDescription, offset: bigint, zip64HeaderLength: Zip64FieldLength = 0) {
   const header = makeBuffer(centralHeaderLength)
   header.setUint32(0, centralHeaderSignature)
   header.setUint32(4, 0x2d03_2d_00) // UNIX app version 4.5 | ZIP version 4.5
@@ -134,7 +135,7 @@ export function centralHeader(file: ZipFileDescription, offset: bigint, needsZip
   header.setUint32(20, clampInt32(file.uncompressedSize!), true)
   header.setUint32(24, clampInt32(file.uncompressedSize!), true)
   header.setUint16(28, file.encodedName.length, true)
-  header.setUint16(30, needsZip64 ? zip64HeaderLength : 0, true)
+  header.setUint16(30, zip64HeaderLength, true)
   // useless disk fields = zero (4 bytes)
   // useless attributes = zero (4 bytes)
   header.setUint16(40, 0o100664, true) // UNIX regular file, permissions 664
@@ -142,12 +143,14 @@ export function centralHeader(file: ZipFileDescription, offset: bigint, needsZip
   return makeUint8Array(header)
 }
 
-export function zip64ExtraField(file: ZipFileDescription, offset: bigint) {
+export function zip64ExtraField(file: ZipFileDescription, offset: bigint, zip64HeaderLength: Exclude<Zip64FieldLength, 0>) {
   const header = makeBuffer(zip64HeaderLength)
   header.setUint16(0, 1, true)
   header.setUint16(2, zip64HeaderLength - 4, true)
-  header.setBigUint64(4, file.uncompressedSize!, true)
-  header.setBigUint64(12, file.uncompressedSize!, true)
-  header.setBigUint64(20, offset, true)
+  if (zip64HeaderLength & 16) {
+    header.setBigUint64(4, file.uncompressedSize!, true)
+    header.setBigUint64(12, file.uncompressedSize!, true)
+  }
+  header.setBigUint64(zip64HeaderLength - 8, offset, true)
   return makeUint8Array(header)
 }

@@ -1,3 +1,8 @@
+## 2.0.1:
+
+* Fixed a bug where small files requiring a 64-bit offset (but not size) were corrupted.
+* Never use 64-bit sizes in data descriptor for small files, even at large offsets.
+
 ## 2.0.0:
 
 * breaking: now targets ES2020 because we need BigInts, because…
