@@ -1,4 +1,5 @@
-import { assertEquals, assertStrictEquals } from "https://deno.land/std/testing/asserts.ts"
+import { assertEquals, assertStrictEquals } from "https://deno.land/std@0.132.0/testing/asserts.ts"
+import { Buffer } from "https://deno.land/std@0.132.0/io/buffer.ts"
 import { fileHeader, fileData, dataDescriptor, centralHeader, zip64ExtraField } from "../src/zip.ts"
 import type { ZipFileDescription } from "../src/input.ts"
 
@@ -19,7 +20,7 @@ Deno.test("the ZIP fileHeader function makes file headers", () => {
 
 Deno.test("the ZIP fileData function yields all the file's data", async () => {
   const file = {...baseFile}
-  const actual = new Deno.Buffer()
+  const actual = new Buffer()
   for await (const chunk of fileData(file)) actual.writeSync(chunk)
   assertEquals(actual.bytes({copy: false}), zipSpec)
 })
