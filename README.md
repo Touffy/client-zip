@@ -5,7 +5,7 @@
 
 # What is `client-zip` ?
 
-`client-zip` concatenates multiple files (e.g. from multiple HTTP requests) into a single ZIP, in the browser, so you can let your users download all the files in one click. It does *not* compress the files or unzip existing archives.
+`client-zip` concatenates multiple files (e.g. from multiple HTTP requests) into a single ZIP, **in the browser**, so you can let your users download all the files in one click. It does *not* compress the files or unzip existing archives.
 
 `client-zip` is lightweight (3.7 kB minified, 1.7 kB gzipped), dependency-free, and 40 times faster than JSZip.
 
@@ -44,6 +44,8 @@ async function downloadTestZip() {
 # Compatibility
 
 This will only work in modern browsers with [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) support (that means no IE at all). The code relies heavily on async iterables but may be transpiled down to support browsers from as far back as mid-2015, as long as they have Streams.
+
+SSR frameworks like Next/Nuxt won’t be able to run — or even parse — client-zip on the server-side. Please look at [this issue for help on how to dynamically include client-zip in that scenario](https://github.com/Touffy/client-zip/issues/28#issuecomment-1018033984).
 
 The nozip64 release targets ES2018 and is a bare ES6 module + an IIFE version optimized for ServiceWorkers.
 
