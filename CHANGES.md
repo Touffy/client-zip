@@ -1,3 +1,7 @@
+## 2.1.0:
+
+* minor: used the `start` directive in WebAssembly to simplify (very slightly) the CRC32 module.
+
 ## 2.0.1:
 
 * Fixed a bug where small files requiring a 64-bit offset (but not size) were corrupted.

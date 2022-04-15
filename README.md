@@ -21,11 +21,9 @@
 npm i client-zip
 ```
 
-or just load the module from your favorite CDN, like https://cdn.jsdelivr.net/npm/client-zip/index.js
+(or just load the module from a CDN such as [UNPKG](https://unpkg.com/client-zip/index.js) or [jsDelivr](https://cdn.jsdelivr.net/npm/client-zip/index.js))
 
-For direct usage with a ServiceWorker's `importScripts`, a [worker.js](https://cdn.jsdelivr.net/npm/client-zip/worker.js) file is also available alongside the module.
-
-**Warning:** this example is fine for a small archive (under 500 MiB, as many browsers don't allow larger Blobs anyway). For larger files, please have a look at the [Service Worker streaming demo](https://touffy.me/client-zip/demo/worker).
+For direct usage with a ServiceWorker's `importScripts`, a [worker.js](https://unpkg.com/client-zip/worker.js) file is also available alongside the module.
 
 ```javascript
 import { downloadZip } from "https://cdn.jsdelivr.net/npm/client-zip/index.js"
@@ -51,7 +49,7 @@ async function downloadTestZip() {
 
 # Compatibility
 
-This will only work in modern browsers with [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) support (that means no IE at all). The code relies heavily on async iterables and, since version 2, on BigInts, so it *will not work on anything earlier than 2020*. [Version 1.x](https://www.npmjs.com/package/client-zip/v/1.3.1) could be transpiled down to support browsers from as far back as mid-2015, as long as they have Streams.
+This will only work in modern browsers with [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) support (that means no IE at all). The code relies heavily on async iterables and, since version 2, on BigInts, so it *will not work on anything earlier than 2020*. [Version 1.x](https://www.npmjs.com/package/client-zip/v/nozip64) could be transpiled down to support browsers from as far back as mid-2015, as long as they have Streams.
 
 The default release of version 2 targets ES2020 and is a bare ES6 module + an IIFE version optimized for ServiceWorkers. Version 1 packages were built for ES2018.
 
@@ -144,6 +142,18 @@ AES and RSA encryption could be implemented quite easily with [WebCrypto](https:
 The current implementation does a fair bit of ArrayBuffer copying and allocation, much of which can be avoided with brand new (and sadly not widely supported yet) browser APIs like [`TextEncoder.encodeInto`](https://encoding.spec.whatwg.org/#dom-textencoder-encodeinto), [`TextEncoderStream`](https://encoding.spec.whatwg.org/#interface-textencoderstream), [BYOB Streams](https://streams.spec.whatwg.org/#byob-readers) and [`TransformStreams`](https://streams.spec.whatwg.org/#ts-model).
 
 CRC-32 computation is, and will certainly remain, by far the largest performance bottleneck in client-zip. Currently, it is implemented with a version of Sarwate's standard algorithm in WebAssmebly. My initial experiments have shown that a naive version of the slice-by-8 algorithm runs no faster than that. I expect that slice-by-8 can ultimately quadruple the processing speed, but only if it takes advantage of the SIMD instructions in WebAssembly which, right now, are at best experimentally supported in browsers. Still, the performance gain is significant enough for client-zip that I would ship it along with the current implementation (as a fallback when SIMD is not supported).
+
+## WebAssembly and Content Security Policy
+
+In order to load the WebAssembly module in client-zip with [Content Security Policy](https://www.w3.org/TR/CSP3/) enabled (now on by default in Chrome), you have to allow `script-src` from the origin where client-zip is fetched, with `'unsafe-wasm-eval'` (and, unfortunately, `unsafe-eval` for browsers that do not yet implement the former). Your CSP header could look like this (assuming you self-host all your scripts including client-zip) :
+
+```
+Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-wasm-eval' 'unsafe-eval'; connect-src *;
+```
+
+The `connect-src` part defines where your page can `fetch` from (`*` means "anywhere", obviously), and that's probably how you get the data for the Zip files, so be sure to set it accordingly.
+
+It is possible to avoid specifying all those unsafe (the word is a little melodramatic) policies, by using [SubResource Integrity](https://w3c.github.io/webappsec-subresource-integrity/) and `strict-dynamic` instead. If you have user-generated content embedded in your website’s HTML then you should already be well acquainted with the finer points of CSPs. If not, it’s too complicated to fit on this page.
 
 ## A note about dates
 
