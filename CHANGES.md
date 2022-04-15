@@ -1,5 +1,9 @@
 ## 1.4.0:
 
+* patch: fixed error in minified index.js from the previous version.
+
+## 1.4.0:
+
 * minor: used the `start` directive in WebAssembly to simplify (very slightly) the CRC32 module.
 
 ## 1.3.1:
