@@ -1,3 +1,12 @@
+## 1.5.0:
+
+* minor: added an *options* parameter to `downloadZip`.
+* new: Zip file size can now be predicted:
+  - export the `predictLength` function to compute the size of a Zip file before creating it.
+  - *options.length* can be set to include a "Content-Length" header in the Response.
+  - *options.metadata* can instead be given the same argument as `predictLength`, as a shortcut to compute and set the Content-Length.
+* minor: the worker script now supports all the input types supported in the ES module, not only Responses.
+
 ## 1.4.0:
 
 * patch: fixed error in minified index.js from the previous version.
