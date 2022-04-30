@@ -1,3 +1,11 @@
+## 2.2.0:
+
+* minor: added an *options* parameter to `downloadZip`.
+* new: Zip file size can now be predicted:
+  - export the `predictLength` function to compute the size of a Zip file before creating it.
+  - *options.length* can be set to include a "Content-Length" header in the Response.
+  - *options.metadata* can instead be given the same argument as `predictLength`, as a shortcut to compute and set the Content-Length.
+
 ## 2.1.0:
 
 * minor: used the `start` directive in WebAssembly to simplify (very slightly) the CRC32 module.
