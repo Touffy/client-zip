@@ -61,12 +61,14 @@ When necessary, client-zip will generate Zip64 archives. Those are not readable 
 
 # Usage
 
-The module exports (and the worker script globally defines) a single function:
+The module exports two functions:
 ```typescript
-function downloadZip(files: ForAwaitable<InputTypes>): Response
+function downloadZip(files: ForAwaitable<InputTypes>, options?: Options): Response
+
+function predictLength(metadata: Iterable<MetadataTypes>): bigint
 ```
 
-You give it an [(*async* or not) iterable a.k.a ForAwaitable](https://github.com/microsoft/TypeScript/issues/36153) list of inputs. Each input can be:
+`downloadZip` is obviously the main function and the only one exposed by the worker script. You give it an [(*async* or not) iterable a.k.a ForAwaitable](https://github.com/microsoft/TypeScript/issues/36153) list of inputs. Each input (`InputTypes`) can be:
 * a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
 * a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File)
 * or an object with the properties:
@@ -74,9 +76,32 @@ You give it an [(*async* or not) iterable a.k.a ForAwaitable](https://github.com
   - `lastModified`: last modification date of the file (defaults to `new Date()` unless the input is a File or Response with a valid "Last-Modified" header)
   - `input`: something that contains your data; it can be a `File`, a `Blob`, a `Response`, some kind of `ArrayView` or a raw `ArrayBuffer`, a `ReadableStream<Uint8Array>` (yes, only Uint8Arrays, but most APIs give you just that type anyway), an `AsyncIterable<ArrayBuffer | ArrayView | string>`, … or just a string.
 
+The *options* argument currently supports two properties, `length` and `metadata` (see [Content-Length prediction](#Content-Length prediction) just below).
+
 The function returns a `Response` immediately. You don't need to wait for the whole ZIP to be ready. It's up to you if you want to pipe the Response somewhere (e.g. if you are using `client-zip` inside a ServiceWorker) or let the browser buffer it all in a Blob.
 
 Unless your list of inputs is quite small, you should prefer generators (when zipping Files or other resources that are already available) and async generators (when zipping Responses so you can `fetch` them lazily, or other resources that are generated last-minute so you don't need to store them longer than necessary) to provide the inputs to `downloadZip`.
+
+## Content-Length prediction
+
+Because of client-zip's streaming design, it can't look ahead at all the files to determine how big the complete archive will be. The returned `Response` will therefore not have a "Content-Length" header, and that can be problematic.
+
+Starting with version 1.5, if you are able to gather all the relevant metadata (file sizes and names) before calling `downloadZip`, you can get it to predict the exact size of the archive and include it as a "Content-Length" header. The metadata must be a synchronous iterable, where each item (`MetadataTypes`) can be :
+
+* a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response), either from the actual request you will use as input, or a HEAD request (either way, the response body will not be consumed at this point)
+* a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File)
+* or an object with the properties:
+  - `name`: the file name ; optional if your input is a File or a Response because they have relevant metadata
+  - `size`: the byte length of the file ; also optional if you provide a File or a Response with a Content-Length header
+  - `input`: same as what you'd pass as the actual input, except this is optional here, and passing a Stream is completely useless
+
+If you already have Files (e.g. in a form input), it's alright to pass them as metadata too. However, if you would normally `fetch` each file from a server, or generate them dynamically, please try using a dedicated metadata endpoint or function, and transforming its response into an array of `{name, size}` objects, rather than doing all the requests or computations in advance just to get a Content-Length.
+
+This iterable of metadata can be passed as the `metadata` property of `downloadZip`'s *options*, or, if you want to display the predicted size without actually creating the Zip file, to the `predictLength` function (not exposed in the worker script).
+
+In the case of `predictLength`, you can even save the return value and pass it later to `downloadZip` as the `length` option, instead of repeating the `metadata`.
+
+# Comparison with JSZip
 
 # Benchmarks
 
@@ -118,6 +143,7 @@ The datasets I used in the new tests are not public domain, but nothing sensitiv
 `client-zip` does not support compression, encryption, or any extra fields and attributes. It already meets the need that sparked its creation: combining many `fetch` responses into a one-click donwload for the end user.
 
 **New in version 2**: it now generates Zip64 archives, which increases the limit on file size to 4 Exabytes (because of JavaScript numbers) and total size to 18 Zettabytes.
+**New in version 2.2**: archive size can be predicted and used as the response's Content-Length.
 
 If you need a feature, you're very welcome to [open an issue](https://github.com/Touffy/client-zip/issues) or submit a pull request.
 

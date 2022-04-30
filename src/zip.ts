@@ -2,6 +2,7 @@ import { makeBuffer, makeUint8Array, clampInt16, clampInt32 } from "./utils.ts"
 import { crc32 } from "./crc32.ts"
 import { formatDOSDateTime } from "./datetime.ts"
 import type { ZipFileDescription } from "./input.ts"
+import { Metadata } from "./metadata.ts"
 
 const fileHeaderSignature = 0x504b_0304, fileHeaderLength = 30
 const descriptorSignature = 0x504b_0708, descriptorLength = 16
@@ -14,7 +15,28 @@ export type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
 
 type Zip64FieldLength = 0 | 12 | 28
 
-export async function* loadFiles(files: ForAwaitable<ZipFileDescription>) {
+export function contentLength(files: Iterable<Metadata>) {
+  let centralLength = BigInt(endLength)
+  let offset = 0n
+  let archiveNeedsZip64 = false
+  for (const file of files) {
+    if (!file.encodedName) throw new Error("Every file must have a non-empty name.")
+    if (file.uncompressedSize === undefined || file.uncompressedSize < 1n)
+      throw new Error(`Missing size for file "${new TextDecoder().decode(file.encodedName)}".`)
+    const bigFile = file.uncompressedSize! >= 0xffffffffn
+    const bigOffset = offset >= 0xffffffffn
+    // @ts-ignore
+    offset += BigInt(fileHeaderLength + descriptorLength + file.encodedName.length + (bigFile && 8)) + file.uncompressedSize
+    // @ts-ignore
+    centralLength += BigInt(file.encodedName.length + centralHeaderLength + (bigOffset * 12 | bigFile * 28))
+    archiveNeedsZip64 ||= bigFile
+  }
+  if (archiveNeedsZip64 || offset >= 0xffffffffn)
+    centralLength += BigInt(zip64endRecordLength + zip64endLocatorLength)
+  return centralLength + offset
+}
+
+export async function* loadFiles(files: ForAwaitable<ZipFileDescription & Metadata>) {
   const centralRecord: Uint8Array[] = []
   let offset = 0n
   let fileCount = 0n
@@ -27,7 +49,8 @@ export async function* loadFiles(files: ForAwaitable<ZipFileDescription>) {
     yield* fileData(file)
     const bigFile = file.uncompressedSize! >= 0xffffffffn
     const bigOffset = offset >= 0xffffffffn
-    const zip64HeaderLength = (+bigOffset * 12 | +bigFile * 28) as Zip64FieldLength
+    // @ts-ignore
+    const zip64HeaderLength = (bigOffset * 12 | bigFile * 28) as Zip64FieldLength
     yield dataDescriptor(file, bigFile)
 
     centralRecord.push(centralHeader(file, offset, zip64HeaderLength))
@@ -77,7 +100,7 @@ export async function* loadFiles(files: ForAwaitable<ZipFileDescription>) {
   yield makeUint8Array(end)
 }
 
-export function fileHeader(file: ZipFileDescription) {
+export function fileHeader(file: ZipFileDescription & Metadata) {
   const header = makeBuffer(fileHeaderLength)
   header.setUint32(0, fileHeaderSignature)
   header.setUint32(4, 0x2d_00_0800) // ZIP version 4.5 | flags, bit 3 on = size and CRCs will be zero
@@ -90,7 +113,7 @@ export function fileHeader(file: ZipFileDescription) {
   return makeUint8Array(header)
 }
 
-export async function* fileData(file: ZipFileDescription) {
+export async function* fileData(file: ZipFileDescription & Metadata) {
   let { bytes } = file
   if ("then" in bytes) bytes = await bytes
   if (bytes instanceof Uint8Array) {
@@ -110,7 +133,7 @@ export async function* fileData(file: ZipFileDescription) {
   }
 }
 
-export function dataDescriptor(file: ZipFileDescription, needsZip64: boolean) {
+export function dataDescriptor(file: ZipFileDescription & Metadata, needsZip64: boolean) {
   const header = makeBuffer(descriptorLength + (needsZip64 ? 8 : 0))
   header.setUint32(0, descriptorSignature)
   header.setUint32(4, file.crc!, true)
@@ -124,7 +147,7 @@ export function dataDescriptor(file: ZipFileDescription, needsZip64: boolean) {
   return makeUint8Array(header)
 }
 
-export function centralHeader(file: ZipFileDescription, offset: bigint, zip64HeaderLength: Zip64FieldLength = 0) {
+export function centralHeader(file: ZipFileDescription & Metadata, offset: bigint, zip64HeaderLength: Zip64FieldLength = 0) {
   const header = makeBuffer(centralHeaderLength)
   header.setUint32(0, centralHeaderSignature)
   header.setUint32(4, 0x2d03_2d_00) // UNIX app version 4.5 | ZIP version 4.5
@@ -143,7 +166,7 @@ export function centralHeader(file: ZipFileDescription, offset: bigint, zip64Hea
   return makeUint8Array(header)
 }
 
-export function zip64ExtraField(file: ZipFileDescription, offset: bigint, zip64HeaderLength: Exclude<Zip64FieldLength, 0>) {
+export function zip64ExtraField(file: ZipFileDescription & Metadata, offset: bigint, zip64HeaderLength: Exclude<Zip64FieldLength, 0>) {
   const header = makeBuffer(zip64HeaderLength)
   header.setUint16(0, 1, true)
   header.setUint16(2, zip64HeaderLength - 4, true)

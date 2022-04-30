@@ -24,7 +24,7 @@
   "author": "David Junger <tffy@free.fr>",
   "license": "MIT",
   "devDependencies": {
-    "esbuild": "^0.8.57",
-    "terser": "^5.6.0"
+    "esbuild": "^0.14.36",
+    "terser": "^5.12.1"
   }
 }
