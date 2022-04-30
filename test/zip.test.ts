@@ -1,6 +1,7 @@
 import { assertEquals, assertStrictEquals } from "https://deno.land/std/testing/asserts.ts"
-import { fileHeader, fileData, dataDescriptor, centralHeader } from "../src/zip.ts"
+import { fileHeader, fileData, dataDescriptor, centralHeader, contentLength } from "../src/zip.ts"
 import type { ZipFileDescription } from "../src/input.ts"
+import type { Metadata } from "../src/metadata.ts";
 
 const BufferFromHex = (hex: string) => new Uint8Array(Array.from(hex.matchAll(/.{2}/g), ([s]) => parseInt(s, 16)))
 
@@ -8,7 +9,7 @@ const zipSpec = Deno.readFileSync("./test/APPNOTE.TXT")
 const specName = new TextEncoder().encode("APPNOTE.TXT")
 const specDate = new Date("2019-04-26T02:00")
 
-const baseFile: ZipFileDescription = Object.freeze({ bytes: new Uint8Array(zipSpec), encodedName: specName, modDate: specDate })
+const baseFile: ZipFileDescription & Metadata = Object.freeze({ bytes: new Uint8Array(zipSpec), encodedName: specName, modDate: specDate })
 
 Deno.test("the ZIP fileHeader function makes file headers", () => {
   const file = {...baseFile}
@@ -45,5 +46,11 @@ Deno.test("the ZIP centralHeader function makes central record file headers", ()
   const offset = 0x01020304
   const actual = centralHeader(file, offset)
   const expected = BufferFromHex("504b0102150314000800000000109a4e7856341240302010403020100b0000000000000000000000b48104030201")
+  assertEquals(actual, expected)
+})
+
+Deno.test("the contentLength function accurately predicts the length of an archive", () => {
+  const actual = contentLength([{uncompressedSize: zipSpec.byteLength, encodedName: specName}])
+  const expected = 171462
   assertEquals(actual, expected)
 })

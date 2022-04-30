@@ -2,13 +2,26 @@ import { makeBuffer, makeUint8Array } from "./utils.ts"
 import { crc32 } from "./crc32.ts"
 import { formatDOSDateTime } from "./datetime.ts"
 import { ZipFileDescription } from "./input.ts"
+import { Metadata } from "./metadata.ts"
 
 const fileHeaderSignature = 0x504b_0304, fileHeaderLength = 30
 const descriptorSignature = 0x504b_0708, descriptorLength = 16
 const centralHeaderSignature = 0x504b_0102, centralHeaderLength = 46
 const endSignature = 0x504b_0506, endLength = 22
+const fileOverhead = descriptorLength + fileHeaderLength + centralHeaderLength
 
-export async function* loadFiles(files: AsyncIterable<ZipFileDescription>) {
+export function contentLength(files: Iterable<Metadata>) {
+  let length = endLength
+  for (const file of files) {
+    if (!file.encodedName) throw new Error("Every file must have a non-empty name.")
+    if (isNaN(file.uncompressedSize ?? NaN))
+      throw new Error(`Missing size for file "${new TextDecoder().decode(file.encodedName)}".`)
+    length += file.encodedName.length * 2 + file.uncompressedSize! + fileOverhead
+  }
+  return length
+}
+
+export async function* loadFiles(files: AsyncIterable<ZipFileDescription & Metadata>) {
   const centralRecord: Uint8Array[] = []
   let offset = 0
   let fileCount = 0
@@ -45,7 +58,7 @@ export async function* loadFiles(files: AsyncIterable<ZipFileDescription>) {
   yield makeUint8Array(end)
 }
 
-export function fileHeader(file: ZipFileDescription) {
+export function fileHeader(file: ZipFileDescription & Metadata) {
   const header = makeBuffer(fileHeaderLength)
   header.setUint32(0, fileHeaderSignature)
   header.setUint32(4, 0x14_00_0800) // ZIP version 2.0 | flags, bit 3 on = size and CRCs will be zero
@@ -58,7 +71,7 @@ export function fileHeader(file: ZipFileDescription) {
   return makeUint8Array(header)
 }
 
-export async function* fileData(file: ZipFileDescription) {
+export async function* fileData(file: ZipFileDescription & Metadata) {
   let { bytes } = file
   if ("then" in bytes) bytes = await bytes
   if (bytes instanceof Uint8Array) {
@@ -78,7 +91,7 @@ export async function* fileData(file: ZipFileDescription) {
   }
 }
 
-export function dataDescriptor(file: ZipFileDescription) {
+export function dataDescriptor(file: ZipFileDescription & Metadata) {
   const header = makeBuffer(16)
   header.setUint32(0, descriptorSignature)
   header.setUint32(4, file.crc!, true)
@@ -87,7 +100,7 @@ export function dataDescriptor(file: ZipFileDescription) {
   return makeUint8Array(header)
 }
 
-export function centralHeader(file: ZipFileDescription, offset: number) {
+export function centralHeader(file: ZipFileDescription & Metadata, offset: number) {
   const header = makeBuffer(centralHeaderLength)
   header.setUint32(0, centralHeaderSignature)
   header.setUint32(4, 0x1503_14_00) // UNIX app version 2.1 | ZIP version 2.0
