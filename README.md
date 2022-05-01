@@ -101,8 +101,6 @@ This iterable of metadata can be passed as the `metadata` property of `downloadZ
 
 In the case of `predictLength`, you can even save the return value and pass it later to `downloadZip` as the `length` option, instead of repeating the `metadata`.
 
-# Comparison with JSZip
-
 # Benchmarks
 
 I started this project because I wasn't impressed with what appeared to be the only other ZIP library for browsers, [JSZip](https://stuk.github.io/jszip/). The JSZip website acknowledges its performance limitations, but now we can actually quantify them. I later found other libraries, which I've included in the new benchmarks.
