@@ -21,7 +21,7 @@ export function contentLength(files: Iterable<Metadata>) {
   let archiveNeedsZip64 = false
   for (const file of files) {
     if (!file.encodedName) throw new Error("Every file must have a non-empty name.")
-    if (file.uncompressedSize === undefined || file.uncompressedSize < 1n)
+    if (file.uncompressedSize === undefined)
       throw new Error(`Missing size for file "${new TextDecoder().decode(file.encodedName)}".`)
     const bigFile = file.uncompressedSize! >= 0xffffffffn
     const bigOffset = offset >= 0xffffffffn

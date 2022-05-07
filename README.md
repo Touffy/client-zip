@@ -97,7 +97,7 @@ Starting with version 1.5, if you are able to gather all the relevant metadata (
 
 If you already have Files (e.g. in a form input), it's alright to pass them as metadata too. However, if you would normally `fetch` each file from a server, or generate them dynamically, please try using a dedicated metadata endpoint or function, and transforming its response into an array of `{name, size}` objects, rather than doing all the requests or computations in advance just to get a Content-Length.
 
-This iterable of metadata can be passed as the `metadata` property of `downloadZip`'s *options*, or, if you want to display the predicted size without actually creating the Zip file, to the `predictLength` function (not exposed in the worker script).
+This iterable of metadata can be passed as the `metadata` property of `downloadZip`'s *options*, or, if you want to display the predicted size without actually creating the Zip file, to the `predictLength` function (not exposed in the worker script). Naturally, the metadata and actual data must match, and be **provided in the same order!** Otherwise, there could be inaccuracies in Zip64 lengths.
 
 In the case of `predictLength`, you can even save the return value and pass it later to `downloadZip` as the `length` option, instead of repeating the `metadata`.
 

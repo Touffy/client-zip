@@ -34,5 +34,5 @@ export function normalizeMetadata(input?: File | Response | BufferLike | StreamL
   if (input instanceof Blob) return { encodedName, uncompressedSize: BigInt(input.size) }
   if (input instanceof ArrayBuffer || ArrayBuffer.isView(input)) return { encodedName, uncompressedSize: BigInt(input.byteLength) }
   // @ts-ignore
-  return { encodedName, uncompressedSize: size && BigInt(size) }
+  return { encodedName, uncompressedSize: size > -1 ? BigInt(size) : undefined }
 }

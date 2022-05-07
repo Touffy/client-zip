@@ -79,6 +79,12 @@ Deno.test("the contentLength function accurately predicts the length of an archi
   assertEquals(actual, expected)
 })
 
+Deno.test("the contentLength function does not throw on zero-length files", () => {
+  const actual = contentLength([{uncompressedSize: 0n, encodedName: specName}])
+  const expected = 136n
+  assertEquals(actual, expected)
+})
+
 Deno.test("the contentLength function accurately predicts the length of a large archive", () => {
   const actual = contentLength([
     {uncompressedSize: 0x110203040n, encodedName: specName},
