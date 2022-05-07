@@ -1,3 +1,7 @@
+## 2.2.1:
+
+* fixed content-length prediction when some files have a length of zero (previously, this threw an error).
+
 ## 2.2.0:
 
 * minor: added an *options* parameter to `downloadZip`.
