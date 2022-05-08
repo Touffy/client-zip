@@ -1,3 +1,7 @@
+## 1.5.1:
+
+* fixed typings (last version incorrectly excluded ArrayBuffers, Blobs and strings as valid `input` types)
+
 ## 1.5.0:
 
 * minor: added an *options* parameter to `downloadZip`.
