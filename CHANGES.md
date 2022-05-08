@@ -1,3 +1,7 @@
+## 2.2.2:
+
+* fixed typings (2.2.0 incorrectly excluded ArrayBuffers, Blobs and strings as valid `input` types)
+
 ## 2.2.1:
 
 * fixed content-length prediction when some files have a length of zero (previously, this threw an error).
