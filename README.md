@@ -61,9 +61,11 @@ When necessary, client-zip will generate Zip64 archives. Those are not readable 
 
 # Usage
 
-The module exports two functions:
+The module exports three functions:
 ```typescript
 function downloadZip(files: ForAwaitable<InputTypes>, options?: Options): Response
+
+function makeZip(files: ForAwaitable<InputTypes>): ReadableStream
 
 function predictLength(metadata: Iterable<MetadataTypes>): bigint
 ```
@@ -81,6 +83,8 @@ The *options* argument currently supports two properties, `length` and `metadata
 The function returns a `Response` immediately. You don't need to wait for the whole ZIP to be ready. It's up to you if you want to pipe the Response somewhere (e.g. if you are using `client-zip` inside a ServiceWorker) or let the browser buffer it all in a Blob.
 
 Unless your list of inputs is quite small, you should prefer generators (when zipping Files or other resources that are already available) and async generators (when zipping Responses so you can `fetch` them lazily, or other resources that are generated last-minute so you don't need to store them longer than necessary) to provide the inputs to `downloadZip`.
+
+`makeZip` works the same way, except it does not wrap resulting `ReadableStream` in `Response`, which provides more freedom to integrate library as needed.
 
 ## Content-Length prediction
 

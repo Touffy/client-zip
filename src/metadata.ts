@@ -15,6 +15,13 @@ export type Metadata = {
 export function normalizeMetadata(input?: File | Response | BufferLike | StreamLike, encodedName?: any, size?: number | bigint): Metadata {
   if (encodedName !== undefined && !(encodedName instanceof Uint8Array)) encodedName = encodeString(encodedName)
 
+  // Ensure that if it's a directory, name ends with `/`.
+  if (encodedName && input === undefined && size === undefined) {
+    encodedName = encodedName[encodedName.length-1] !== 47
+      ? new Uint8Array([...encodedName, 47])
+      : encodedName;
+  }
+
   if (input instanceof File) return {
     encodedName: encodedName || encodeString(input.name),
     uncompressedSize: BigInt(input.size)
@@ -34,5 +41,12 @@ export function normalizeMetadata(input?: File | Response | BufferLike | StreamL
   if (input instanceof Blob) return { encodedName, uncompressedSize: BigInt(input.size) }
   if (input instanceof ArrayBuffer || ArrayBuffer.isView(input)) return { encodedName, uncompressedSize: BigInt(input.byteLength) }
   // @ts-ignore
-  return { encodedName, uncompressedSize: size > -1 ? BigInt(size) : undefined }
+  return { encodedName, uncompressedSize: getUncompressedSize(input, size) }
+}
+
+function getUncompressedSize(input: any, size: number | bigint) {
+  if (size > -1) {
+    return BigInt(size);
+  }
+  return input ? undefined : 0n;
 }

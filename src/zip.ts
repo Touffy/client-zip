@@ -1,7 +1,7 @@
 import { makeBuffer, makeUint8Array, clampInt16, clampInt32 } from "./utils.ts"
 import { crc32 } from "./crc32.ts"
 import { formatDOSDateTime } from "./datetime.ts"
-import type { ZipFileDescription } from "./input.ts"
+import type { ZipEntryDescription, ZipFileDescription } from "./input.ts"
 import { Metadata } from "./metadata.ts"
 
 const fileHeaderSignature = 0x504b_0304, fileHeaderLength = 30
@@ -36,7 +36,7 @@ export function contentLength(files: Iterable<Metadata>) {
   return centralLength + offset
 }
 
-export async function* loadFiles(files: ForAwaitable<ZipFileDescription & Metadata>) {
+export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metadata>) {
   const centralRecord: Uint8Array[] = []
   let offset = 0n
   let fileCount = 0n
@@ -46,7 +46,9 @@ export async function* loadFiles(files: ForAwaitable<ZipFileDescription & Metada
   for await (const file of files) {
     yield fileHeader(file)
     yield file.encodedName
-    yield* fileData(file)
+    if (file.isFile) {
+      yield* fileData(file)
+    }
     const bigFile = file.uncompressedSize! >= 0xffffffffn
     const bigOffset = offset >= 0xffffffffn
     // @ts-ignore
@@ -100,7 +102,7 @@ export async function* loadFiles(files: ForAwaitable<ZipFileDescription & Metada
   yield makeUint8Array(end)
 }
 
-export function fileHeader(file: ZipFileDescription & Metadata) {
+export function fileHeader(file: ZipEntryDescription & Metadata) {
   const header = makeBuffer(fileHeaderLength)
   header.setUint32(0, fileHeaderSignature)
   header.setUint32(4, 0x2d_00_0800) // ZIP version 4.5 | flags, bit 3 on = size and CRCs will be zero
@@ -133,10 +135,10 @@ export async function* fileData(file: ZipFileDescription & Metadata) {
   }
 }
 
-export function dataDescriptor(file: ZipFileDescription & Metadata, needsZip64: boolean) {
+export function dataDescriptor(file: ZipEntryDescription & Metadata, needsZip64: boolean) {
   const header = makeBuffer(descriptorLength + (needsZip64 ? 8 : 0))
   header.setUint32(0, descriptorSignature)
-  header.setUint32(4, file.crc!, true)
+  header.setUint32(4, file.isFile ? file.crc! : 0, true)
   if (needsZip64) {
     header.setBigUint64(8, file.uncompressedSize!, true)
     header.setBigUint64(16, file.uncompressedSize!, true)
@@ -147,26 +149,26 @@ export function dataDescriptor(file: ZipFileDescription & Metadata, needsZip64: 
   return makeUint8Array(header)
 }
 
-export function centralHeader(file: ZipFileDescription & Metadata, offset: bigint, zip64HeaderLength: Zip64FieldLength = 0) {
+export function centralHeader(file: ZipEntryDescription & Metadata, offset: bigint, zip64HeaderLength: Zip64FieldLength = 0) {
   const header = makeBuffer(centralHeaderLength)
   header.setUint32(0, centralHeaderSignature)
   header.setUint32(4, 0x2d03_2d_00) // UNIX app version 4.5 | ZIP version 4.5
   header.setUint16(8, 0x0800) // flags, bit 3 on
   // leave compression = zero (2 bytes) until we implement compression
   formatDOSDateTime(file.modDate, header, 12)
-  header.setUint32(16, file.crc!, true)
+  header.setUint32(16, file.isFile ? file.crc! : 0, true)
   header.setUint32(20, clampInt32(file.uncompressedSize!), true)
   header.setUint32(24, clampInt32(file.uncompressedSize!), true)
   header.setUint16(28, file.encodedName.length, true)
   header.setUint16(30, zip64HeaderLength, true)
   // useless disk fields = zero (4 bytes)
   // useless attributes = zero (4 bytes)
-  header.setUint16(40, 0o100664, true) // UNIX regular file, permissions 664
+  header.setUint16(40, file.isFile ? 0o100664 : 0o040775, true) // UNIX regular file with permissions 664, or folder with permission 775.
   header.setUint32(42, clampInt32(offset), true) // offset
   return makeUint8Array(header)
 }
 
-export function zip64ExtraField(file: ZipFileDescription & Metadata, offset: bigint, zip64HeaderLength: Exclude<Zip64FieldLength, 0>) {
+export function zip64ExtraField(file: ZipEntryDescription & Metadata, offset: bigint, zip64HeaderLength: Exclude<Zip64FieldLength, 0>) {
   const header = makeBuffer(zip64HeaderLength)
   header.setUint16(0, 1, true)
   header.setUint16(2, zip64HeaderLength - 4, true)
