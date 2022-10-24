@@ -1,7 +1,7 @@
 import { assertEquals, assertStrictEquals } from "https://deno.land/std@0.132.0/testing/asserts.ts"
 import { Buffer } from "https://deno.land/std@0.132.0/io/buffer.ts"
 import { fileHeader, fileData, dataDescriptor, centralHeader, zip64ExtraField, contentLength } from "../src/zip.ts"
-import type { ZipFileDescription } from "../src/input.ts"
+import type { ZipFileDescription, ZipFolderDescription } from "../src/input.ts"
 import type { Metadata } from "../src/metadata.ts"
 
 const BufferFromHex = (hex: string) => new Uint8Array(Array.from(hex.matchAll(/.{2}/g), ([s]) => parseInt(s, 16)))
@@ -10,12 +10,21 @@ const zipSpec = Deno.readFileSync("./test/APPNOTE.TXT")
 const specName = new TextEncoder().encode("APPNOTE.TXT")
 const specDate = new Date("2019-04-26T02:00")
 
-const baseFile: ZipFileDescription & Metadata = Object.freeze({ bytes: new Uint8Array(zipSpec), encodedName: specName, modDate: specDate })
+const baseFile: ZipFileDescription & Metadata = Object.freeze({ isFile: true, bytes: new Uint8Array(zipSpec), encodedName: specName, modDate: specDate })
+
+const baseFolder: ZipFolderDescription & Metadata = Object.freeze({ isFile: false, encodedName: new TextEncoder().encode("folder"), modDate: specDate })
 
 Deno.test("the ZIP fileHeader function makes file headers", () => {
   const file = {...baseFile}
   const actual = fileHeader(file)
   const expected = BufferFromHex("504b03042d000800000000109a4e0000000000000000000000000b000000")
+  assertEquals(actual, expected)
+})
+
+Deno.test("the ZIP fileHeader function makes folder headers", () => {
+  const folder = {...baseFolder}
+  const actual = fileHeader(folder)
+  const expected = BufferFromHex("504b03042d000800000000109a4e00000000000000000000000006000000")
   assertEquals(actual, expected)
 })
 
@@ -49,6 +58,12 @@ Deno.test("the ZIP dataDescriptor function makes ZIP64 data descriptors", () => 
   assertEquals(actual, expected)
 })
 
+Deno.test("the ZIP dataDescriptor function makes folder data descriptors", () => {
+  const actual = dataDescriptor(baseFolder, false)
+  const expected = BufferFromHex("504b0708000000000000000000000000")
+  assertEquals(actual, expected)
+})
+
 Deno.test("the ZIP centralHeader function makes central record file headers", () => {
   const file = {...baseFile, uncompressedSize: 0x10203040n, crc: 0x12345678}
   const offset = 0x01020304n
@@ -62,6 +77,13 @@ Deno.test("the ZIP centralHeader function makes ZIP64 central record file header
   const offset = 0x101020304n
   const actual = centralHeader(file, offset, 28)
   const expected = BufferFromHex("504b01022d032d000800000000109a4e78563412ffffffffffffffff0b001c000000000000000000b481ffffffff")
+  assertEquals(actual, expected)
+})
+
+Deno.test("the ZIP centralHeader function makes central record folder headers", () => {
+  const offset = 0x01020304n
+  const actual = centralHeader(baseFolder, offset, 0)
+  const expected = BufferFromHex("504b01022d032d000800000000109a4e000000000000000000000000060000000000000000000000fd4104030201")
   assertEquals(actual, expected)
 })
 
