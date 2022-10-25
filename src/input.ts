@@ -11,7 +11,6 @@ export type ZipFileDescription = {
 /** The file name and modification date will be read from the input if it is a File or Response;
  * extra arguments can be given to override the input's metadata.
  * For other types of input, the `name` is required and `modDate` will default to *now*.
- * @param encodedName will be coerced to string, so… whatever
  * @param modDate should be a Date or timestamp or anything else that works in `new Date()`
  */
   export function normalizeInput(input: File | Response | BufferLike | StreamLike, modDate?: any): ZipFileDescription {
