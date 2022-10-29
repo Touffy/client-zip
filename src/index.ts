@@ -14,7 +14,7 @@ type InputWithSizeMeta = { input: BufferLike, name: any, lastModified?: any, siz
 type InputWithoutMeta = { input: StreamLike, name: any, lastModified?: any, size?: number | bigint }
 
 /** The folder name must be provided ; modification date can’t be guessed. */
-type InputFolder = { name: any, lastModified?: any }
+type InputFolder = { name: any, lastModified?: any, input?: never, size?: never }
 
 /** Both filename and size must be provided ; input is not helpful here. */
 type JustMeta = { input?: StreamLike | undefined, name: any, lastModified?: any, size: number | bigint }
@@ -28,19 +28,19 @@ type Options = {
   metadata?: Iterable<InputWithMeta | InputWithSizeMeta | JustMeta>
 }
 
-function normalizeArgs(file: InputWithMeta | InputWithSizeMeta | InputWithoutMeta | JustMeta) {
+function normalizeArgs(file: InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder | JustMeta) {
   return file instanceof File || file instanceof Response
     ? [[file], [file]] as const
     : [[file.input, file.name, file.size], [file.input, file.lastModified]] as const
 }
 
-function* mapMeta(files: Iterable<InputWithMeta | InputWithSizeMeta | JustMeta>) {
+function* mapMeta(files: Iterable<InputWithMeta | InputWithSizeMeta | JustMeta | InputFolder>) {
   // @ts-ignore type inference isn't good enough for this… yet…
   // but rewriting the code to be more explicit would make it longer
   for (const file of files) yield normalizeMetadata(...normalizeArgs(file)[0])
 }
 
-async function* mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta>) {
+async function* mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>) {
   for await (const file of files) {
     const [metaArgs, dataArgs] = normalizeArgs(file)
     // @ts-ignore type inference isn't good enough for this… yet…

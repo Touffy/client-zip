@@ -13,7 +13,9 @@
 * [Compatibility](#Compatibility)
 * [Usage](#Usage)
 * [Benchmarks](#Benchmarks)
+* [Known Issues](#Known-Issues)
 * [Roadmap](#Roadmap)
+* [Notes and F.A.Q.](#Notes)
 
 # Quick Start
 
@@ -49,13 +51,9 @@ async function downloadTestZip() {
 
 # Compatibility
 
-This will only work in modern browsers with [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) support (that means no IE at all). The code relies heavily on async iterables and, since version 2, on BigInts, so it *will not work on anything earlier than 2020*. [Version 1.x](https://www.npmjs.com/package/client-zip/v/nozip64) could be transpiled down to support browsers from as far back as mid-2015, as long as they have Streams.
+client-zip works in all modern browsers (and Deno) out of the box. If you bundle it with your app and try to transpile it down to lower than ES2020, it will break because it needs BigInts. [Version 1.x](https://www.npmjs.com/package/client-zip/v/nozip64) may be painfully transpiled down to as low as ES2015.
 
-SSR frameworks like Next/Nuxt won’t be able to run — or even parse — client-zip on the server-side. Please look at [this issue for help on how to dynamically include client-zip in that scenario](https://github.com/Touffy/client-zip/issues/28#issuecomment-1018033984).
-
-The default release of version 2 targets ES2020 and is a bare ES6 module + an IIFE version optimized for ServiceWorkers. Version 1 packages were built for ES2018.
-
-Though in itself not a feature of client-zip, streaming through a ServiceWorker is practically a must-have for large archives. Sadly, there's an old bug in Safari that made it impossible there until Technology Preview 138 (released 20 jan. 2022).
+The default release of version 2 targets ES2020 and is a bare ES6 module + an IIFE version suitable for a ServiceWorker's `importScript`. Version 1 releases were built for ES2018.
 
 When necessary, client-zip will generate Zip64 archives. Those are not readable by every ZIP reader out there, especially with the streaming flag.
 
@@ -84,7 +82,7 @@ The function returns a `Response` immediately. You don't need to wait for the wh
 
 Unless your list of inputs is quite small, you should prefer generators (when zipping Files or other resources that are already available) and async generators (when zipping Responses so you can `fetch` them lazily, or other resources that are generated last-minute so you don't need to store them longer than necessary) to provide the inputs to `downloadZip`.
 
-`makeZip` works the same way, except it does not wrap resulting `ReadableStream` in `Response`, which provides more freedom to integrate library as needed.
+`makeZip` is just like `downloadZip` except it returns the underlying `ReadableStream` directly, for use cases that do not involve actually downloading to the client filesystem.
 
 ## Content-Length prediction
 
@@ -100,6 +98,8 @@ Starting with version 1.5, if you are able to gather all the relevant metadata (
   - `input`: same as what you'd pass as the actual input, except this is optional here, and passing a Stream is completely useless
 
 If you already have Files (e.g. in a form input), it's alright to pass them as metadata too. However, if you would normally `fetch` each file from a server, or generate them dynamically, please try using a dedicated metadata endpoint or function, and transforming its response into an array of `{name, size}` objects, rather than doing all the requests or computations in advance just to get a Content-Length.
+
+An object with a *name* but no *input* and no *size* (not even zero) will be interpreted as an empty folder and renamed accordingly. To properly specify emtpy files without an *input*, set the *size* explicitly to zero (`0` or `0n`).
 
 This iterable of metadata can be passed as the `metadata` property of `downloadZip`'s *options*, or, if you want to display the predicted size without actually creating the Zip file, to the `predictLength` function (not exposed in the worker script). Naturally, the metadata and actual data must match, and be **provided in the same order!** Otherwise, there could be inaccuracies in Zip64 lengths.
 
@@ -140,6 +140,12 @@ Now, comparing bundle size is clearly unfair because the others do a bunch of th
 
 The datasets I used in the new tests are not public domain, but nothing sensitive either ; I can send them if you ask.
 
+# Known Issues
+
+* client-zip cannot be bundled by SSR frameworks that expect it to run in Node.js too ([workaround](https://github.com/Touffy/client-zip/issues/28#issuecomment-1018033984)).
+* Firefox may kill a Service Worker that is still feeding a download ([workaround](https://github.com/Touffy/client-zip/issues/46#issuecomment-1259223708)).
+* Safari could not download from a Service Worker until version 15.4 (released 4 march 2022).
+
 # Roadmap
 
 `client-zip` does not support compression, encryption, or any extra fields and attributes. It already meets the need that sparked its creation: combining many `fetch` responses into a one-click donwload for the end user.
@@ -173,6 +179,8 @@ The current implementation does a fair bit of ArrayBuffer copying and allocation
 
 CRC-32 computation is, and will certainly remain, by far the largest performance bottleneck in client-zip. Currently, it is implemented with a version of Sarwate's standard algorithm in WebAssmebly. My initial experiments have shown that a naive version of the slice-by-8 algorithm runs no faster than that. I expect that slice-by-8 can ultimately quadruple the processing speed, but only if it takes advantage of the SIMD instructions in WebAssembly which, right now, are at best experimentally supported in browsers. Still, the performance gain is significant enough for client-zip that I would ship it along with the current implementation (as a fallback when SIMD is not supported).
 
+# Notes
+
 ## WebAssembly and Content Security Policy
 
 In order to load the WebAssembly module in client-zip with [Content Security Policy](https://www.w3.org/TR/CSP3/) enabled (now on by default in Chrome), you have to allow `script-src` from the origin where client-zip is fetched, with `'unsafe-wasm-eval'` (and, unfortunately, `unsafe-eval` for browsers that do not yet implement the former). Your CSP header could look like this (assuming you self-host all your scripts including client-zip) :
@@ -188,3 +196,11 @@ It is possible to avoid specifying all those unsafe (the word is a little melodr
 ## A note about dates
 
 The old DOS date/time format used by ZIP files is an unspecified "local time". Therefore, to ensure the best results for the end user, `client-zip` will use the client's own timezone (not UTC or something decided by the author), resulting in a ZIP archive that varies across different clients. If you write integration tests that expect an exact binary content, make sure you set the machine running the tests to the same timezone as the one that generated the expected content.
+
+## How can I include folders in the archive ?
+
+When the folder has contents, just include the folder hierarchy in its content's filenames (e.g. `{ name: "folder/file.ext", input }` will implicitly create "folder/" and place "file.ext" in it). Empty folders can be specified as `{ name: "folder/" }` (with **no size**, **no input**, and an optional lastModified property). Forward slashes even for Windows users !
+
+Any input object that has no size and no input will be treated as a folder, and a trailing slash will be added to its filename when necessary. Conversely, any input object that has a size or input (even an empty string) will be treated as a file, and the trailing slash will be removed if present.
+
+Usage of `predictLength` or the `metadata` option must be consistent with the actual input. For exampe, if `{ name: "file" }` is passed as metadata, client-zip will think it's an empty folder named "file/". If you then pass `{ input: "", name: "file" }` in the same order to `downloadZip`, it will store the contents as an empty file with no trailing slash ; therefore, the predicted length will be off by at least one.

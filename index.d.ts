@@ -12,7 +12,7 @@ type StreamLike = ReadableStream<Uint8Array> | AsyncIterable<BufferLike>
  type InputWithoutMeta = { input: StreamLike, name: any, lastModified?: any, size?: number | bigint }
  
 /** The folder name must be provided ; modification date can’t be guessed. */
-type InputFolder = { name: any, lastModified?: any }
+type InputFolder = { name: any, lastModified?: any, input?: never, size?: never }
 
  /** Both filename and size must be provided ; input is not helpful here. */
  type JustMeta = { input?: StreamLike | undefined, name: any, lastModified?: any, size: number | bigint }
@@ -34,4 +34,4 @@ export declare function predictLength(files: Iterable<InputWithMeta | InputWithS
 
 export declare function downloadZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, options?: Options): Response
 
-export declare function makeZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>)
+export declare function makeZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>): ReadableStream<Uint8Array>
