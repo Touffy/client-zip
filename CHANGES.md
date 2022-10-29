@@ -1,3 +1,10 @@
+## 2.3.0:
+
+* fixed filename extraction from a Response when its URL has a trailing slash.
+* new: allow the creation of empty folders in the archive with `{ name, lastModified? }`.
+  - remove trailing slashes from file names and add one to folder names if needed.
+* new: export the `makeZip` function which returns a ReadableStream without its Response wrapper.
+
 ## 2.2.2:
 
 * fixed typings (2.2.0 incorrectly excluded ArrayBuffers, Blobs and strings as valid `input` types)
