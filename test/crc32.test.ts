@@ -1,10 +1,10 @@
 import { assertEquals } from "https://deno.land/std@0.132.0/testing/asserts.ts"
-import { crc32, memory } from "../src/crc32.ts"
+import { crc32, CRC_TABLE } from "../src/crc32.ts"
 
 const table = await Deno.readFile("./test/table.array")
 
 Deno.test("the CRC32 module precomputes CRCs for each byte using the polynomial 0xEDB88320", () => {
-  const actual = new Uint8Array(memory.buffer.slice(0, 0x0400))
+  const actual = new Uint8Array(CRC_TABLE.buffer)
   const expected = table.slice(0, 0x400)
   assertEquals(actual, expected)
 })
