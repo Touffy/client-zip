@@ -36,7 +36,7 @@ export function contentLength(files: Iterable<Metadata>) {
   return centralLength + offset
 }
 
-export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metadata>) {
+export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metadata>, utcDates: boolean = false, skipEmitFileData: boolean = false) {
   const centralRecord: Uint8Array[] = []
   let offset = 0n
   let fileCount = 0n
@@ -44,10 +44,10 @@ export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metad
 
   // write files
   for await (const file of files) {
-    yield fileHeader(file)
+    yield fileHeader(file, utcDates)
     yield file.encodedName
     if (file.isFile) {
-      yield* fileData(file)
+      yield* fileData(file, skipEmitFileData)
     }
     const bigFile = file.uncompressedSize! >= 0xffffffffn
     const bigOffset = offset >= 0xffffffffn
@@ -55,7 +55,7 @@ export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metad
     const zip64HeaderLength = (bigOffset * 12 | bigFile * 28) as Zip64FieldLength
     yield dataDescriptor(file, bigFile)
 
-    centralRecord.push(centralHeader(file, offset, zip64HeaderLength))
+    centralRecord.push(centralHeader(file, offset, zip64HeaderLength, utcDates))
     centralRecord.push(file.encodedName)
     if (zip64HeaderLength) centralRecord.push(zip64ExtraField(file, offset, zip64HeaderLength))
     if (bigFile) offset += 8n // because the data descriptor will have 64-bit sizes
@@ -102,12 +102,12 @@ export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metad
   yield makeUint8Array(end)
 }
 
-export function fileHeader(file: ZipEntryDescription & Metadata) {
+export function fileHeader(file: ZipEntryDescription & Metadata, utcDates: boolean = false) {
   const header = makeBuffer(fileHeaderLength)
   header.setUint32(0, fileHeaderSignature)
   header.setUint32(4, 0x2d_00_0800) // ZIP version 4.5 | flags, bit 3 on = size and CRCs will be zero
   // leave compression = zero (2 bytes) until we implement compression
-  formatDOSDateTime(file.modDate, header, 10)
+  formatDOSDateTime(file.modDate, header, 10, utcDates)
   // leave CRC = zero (4 bytes) because we'll write it later, in the central repo
   // leave lengths = zero (2x4 bytes) because we'll write them later, in the central repo
   header.setUint16(26, file.encodedName.length, true)
@@ -115,7 +115,7 @@ export function fileHeader(file: ZipEntryDescription & Metadata) {
   return makeUint8Array(header)
 }
 
-export async function* fileData(file: ZipFileDescription & Metadata) {
+export async function* fileData(file: ZipFileDescription & Metadata, skipEmitFileData: boolean = false) {
   let { bytes } = file
   if ("then" in bytes) bytes = await bytes
   if (bytes instanceof Uint8Array) {
@@ -130,7 +130,9 @@ export async function* fileData(file: ZipFileDescription & Metadata) {
       if (done) break
       file.crc = crc32(value!, file.crc)
       file.uncompressedSize += BigInt(value!.length)
-      yield value!
+      if (!skipEmitFileData) {
+        yield value!
+      }
     }
   }
 }
@@ -149,13 +151,13 @@ export function dataDescriptor(file: ZipEntryDescription & Metadata, needsZip64:
   return makeUint8Array(header)
 }
 
-export function centralHeader(file: ZipEntryDescription & Metadata, offset: bigint, zip64HeaderLength: Zip64FieldLength = 0) {
+export function centralHeader(file: ZipEntryDescription & Metadata, offset: bigint, zip64HeaderLength: Zip64FieldLength = 0, utcDates: boolean = false) {
   const header = makeBuffer(centralHeaderLength)
   header.setUint32(0, centralHeaderSignature)
   header.setUint32(4, 0x2d03_2d_00) // UNIX app version 4.5 | ZIP version 4.5
   header.setUint16(8, 0x0800) // flags, bit 3 on
   // leave compression = zero (2 bytes) until we implement compression
-  formatDOSDateTime(file.modDate, header, 12)
+  formatDOSDateTime(file.modDate, header, 12, utcDates)
   header.setUint32(16, file.isFile ? file.crc! : 0, true)
   header.setUint32(20, clampInt32(file.uncompressedSize!), true)
   header.setUint32(24, clampInt32(file.uncompressedSize!), true)

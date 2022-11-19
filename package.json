@@ -3,6 +3,7 @@
   "version": "2.3.0",
   "description": "A tiny and fast client-side streaming ZIP generator",
   "browser": "index.js",
+  "type": "module",
   "module": "index.js",
   "types": "index.d.ts",
   "scripts": {

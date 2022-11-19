@@ -26,6 +26,12 @@ type Options = {
   /** If provided, the returned Response will have its `Content-Length` header set to the result of
    * calling `predictLength` on that metadata. Overrides the `length` option. */
   metadata?: Iterable<InputWithMeta | InputWithSizeMeta | JustMeta>
+  /** If set, will use UTC date functions for DOS-date to help with reproducability */
+  utcDates?: boolean
+  /** If set, will skip iterating over the data entirely. The makeZip() iterator
+   * will compute the crc and size. Useful for computing the ZIP data stream where the data is already
+   * stored */
+  skipEmitFileData?: boolean
 }
 
 function normalizeArgs(file: InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder | JustMeta) {
@@ -57,9 +63,9 @@ export function downloadZip(files: ForAwaitable<InputWithMeta | InputWithSizeMet
   const headers: Record<string, any> = { "Content-Type": "application/zip", "Content-Disposition": "attachment" }
   if ((typeof options.length === "bigint" || Number.isInteger(options.length)) && options.length! > 0) headers["Content-Length"] = String(options.length)
   if (options.metadata) headers["Content-Length"] = String(predictLength(options.metadata))
-  return new Response(makeZip(files), { headers })
+  return new Response(makeZip(files, options), { headers })
 }
 
-export function makeZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>) {
-  return ReadableFromIter(loadFiles(mapFiles(files)));
+export function makeZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, options: Options = {}) {
+  return ReadableFromIter(loadFiles(mapFiles(files), options.utcDates, options.skipEmitFileData));
 }
