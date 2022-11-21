@@ -36,7 +36,7 @@ export function contentLength(files: Iterable<Metadata>) {
   return centralLength + offset
 }
 
-export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metadata>, markerBeforeFileStart: any = null, markerAfterFileEnd: any = null) {
+export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metadata>) {
   const centralRecord: Uint8Array[] = []
   let offset = 0n
   let fileCount = 0n
@@ -47,7 +47,7 @@ export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metad
     yield fileHeader(file)
     yield file.encodedName
     if (file.isFile) {
-      yield* fileData(file, markerBeforeFileStart, markerAfterFileEnd)
+      yield* fileData(file)
     }
     const bigFile = file.uncompressedSize! >= 0xffffffffn
     const bigOffset = offset >= 0xffffffffn
@@ -115,7 +115,7 @@ export function fileHeader(file: ZipEntryDescription & Metadata) {
   return makeUint8Array(header)
 }
 
-export async function* fileData(file: ZipFileDescription & Metadata, markerBeforeFileStart: any = null, markerAfterFileEnd: any = null) {
+export async function* fileData(file: ZipFileDescription & Metadata) {
   let { bytes } = file
   if ("then" in bytes) bytes = await bytes
   if (bytes instanceof Uint8Array) {
@@ -125,18 +125,12 @@ export async function* fileData(file: ZipFileDescription & Metadata, markerBefor
   } else {
     file.uncompressedSize = 0n
     const reader = bytes.getReader()
-    if (markerBeforeFileStart) {
-      yield markerBeforeFileStart
-    }
     while (true) {
       const { value, done } = await reader.read()
       if (done) break
       file.crc = crc32(value!, file.crc)
       file.uncompressedSize += BigInt(value!.length)
       yield value!
-    }
-    if (markerAfterFileEnd) {
-      yield markerAfterFileEnd
     }
   }
 }
