@@ -36,7 +36,7 @@ export function contentLength(files: Iterable<Metadata>) {
   return centralLength + offset
 }
 
-export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metadata>, utcDates: boolean = false, skipEmitFileData: boolean = false) {
+export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metadata>, markerBeforeFileStart: any = null, markerAfterFileEnd: any = null) {
   const centralRecord: Uint8Array[] = []
   let offset = 0n
   let fileCount = 0n
@@ -44,10 +44,10 @@ export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metad
 
   // write files
   for await (const file of files) {
-    yield fileHeader(file, utcDates)
+    yield fileHeader(file)
     yield file.encodedName
     if (file.isFile) {
-      yield* fileData(file, skipEmitFileData)
+      yield* fileData(file, markerBeforeFileStart, markerAfterFileEnd)
     }
     const bigFile = file.uncompressedSize! >= 0xffffffffn
     const bigOffset = offset >= 0xffffffffn
@@ -55,7 +55,7 @@ export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metad
     const zip64HeaderLength = (bigOffset * 12 | bigFile * 28) as Zip64FieldLength
     yield dataDescriptor(file, bigFile)
 
-    centralRecord.push(centralHeader(file, offset, zip64HeaderLength, utcDates))
+    centralRecord.push(centralHeader(file, offset, zip64HeaderLength))
     centralRecord.push(file.encodedName)
     if (zip64HeaderLength) centralRecord.push(zip64ExtraField(file, offset, zip64HeaderLength))
     if (bigFile) offset += 8n // because the data descriptor will have 64-bit sizes
@@ -102,12 +102,12 @@ export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metad
   yield makeUint8Array(end)
 }
 
-export function fileHeader(file: ZipEntryDescription & Metadata, utcDates: boolean = false) {
+export function fileHeader(file: ZipEntryDescription & Metadata) {
   const header = makeBuffer(fileHeaderLength)
   header.setUint32(0, fileHeaderSignature)
   header.setUint32(4, 0x2d_00_0800) // ZIP version 4.5 | flags, bit 3 on = size and CRCs will be zero
   // leave compression = zero (2 bytes) until we implement compression
-  formatDOSDateTime(file.modDate, header, 10, utcDates)
+  formatDOSDateTime(file.modDate, header, 10)
   // leave CRC = zero (4 bytes) because we'll write it later, in the central repo
   // leave lengths = zero (2x4 bytes) because we'll write them later, in the central repo
   header.setUint16(26, file.encodedName.length, true)
@@ -115,7 +115,7 @@ export function fileHeader(file: ZipEntryDescription & Metadata, utcDates: boole
   return makeUint8Array(header)
 }
 
-export async function* fileData(file: ZipFileDescription & Metadata, skipEmitFileData: boolean = false) {
+export async function* fileData(file: ZipFileDescription & Metadata, markerBeforeFileStart: any = null, markerAfterFileEnd: any = null) {
   let { bytes } = file
   if ("then" in bytes) bytes = await bytes
   if (bytes instanceof Uint8Array) {
@@ -125,14 +125,18 @@ export async function* fileData(file: ZipFileDescription & Metadata, skipEmitFil
   } else {
     file.uncompressedSize = 0n
     const reader = bytes.getReader()
+    if (markerBeforeFileStart) {
+      yield markerBeforeFileStart
+    }
     while (true) {
       const { value, done } = await reader.read()
       if (done) break
       file.crc = crc32(value!, file.crc)
       file.uncompressedSize += BigInt(value!.length)
-      if (!skipEmitFileData) {
-        yield value!
-      }
+      yield value!
+    }
+    if (markerAfterFileEnd) {
+      yield markerAfterFileEnd
     }
   }
 }
@@ -151,13 +155,13 @@ export function dataDescriptor(file: ZipEntryDescription & Metadata, needsZip64:
   return makeUint8Array(header)
 }
 
-export function centralHeader(file: ZipEntryDescription & Metadata, offset: bigint, zip64HeaderLength: Zip64FieldLength = 0, utcDates: boolean = false) {
+export function centralHeader(file: ZipEntryDescription & Metadata, offset: bigint, zip64HeaderLength: Zip64FieldLength = 0) {
   const header = makeBuffer(centralHeaderLength)
   header.setUint32(0, centralHeaderSignature)
   header.setUint32(4, 0x2d03_2d_00) // UNIX app version 4.5 | ZIP version 4.5
   header.setUint16(8, 0x0800) // flags, bit 3 on
   // leave compression = zero (2 bytes) until we implement compression
-  formatDOSDateTime(file.modDate, header, 12, utcDates)
+  formatDOSDateTime(file.modDate, header, 12)
   header.setUint32(16, file.isFile ? file.crc! : 0, true)
   header.setUint32(20, clampInt32(file.uncompressedSize!), true)
   header.setUint32(24, clampInt32(file.uncompressedSize!), true)

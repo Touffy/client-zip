@@ -26,12 +26,10 @@ type Options = {
   /** If provided, the returned Response will have its `Content-Length` header set to the result of
    * calling `predictLength` on that metadata. Overrides the `length` option. */
   metadata?: Iterable<InputWithMeta | InputWithSizeMeta | JustMeta>
-  /** If set, will use UTC date functions for DOS-date to help with reproducability */
-  utcDates?: boolean
-  /** If set, will skip iterating over the data entirely. The makeZip() iterator
-   * will compute the crc and size. Useful for computing the ZIP data stream where the data is already
-   * stored */
-  skipEmitFileData?: boolean
+  /** If provided, will be emitted before file start */
+  markerBeforeFileStart?: any
+  /** If provided, will be emitted after file end */
+  markerAfterFileEnd?: any
 }
 
 function normalizeArgs(file: InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder | JustMeta) {
@@ -67,5 +65,5 @@ export function downloadZip(files: ForAwaitable<InputWithMeta | InputWithSizeMet
 }
 
 export function makeZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, options: Options = {}) {
-  return ReadableFromIter(loadFiles(mapFiles(files), options.utcDates, options.skipEmitFileData));
+  return ReadableFromIter(loadFiles(mapFiles(files), options.markerBeforeFileStart, options.markerAfterFileEnd));
 }
