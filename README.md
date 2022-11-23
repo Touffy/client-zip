@@ -127,7 +127,7 @@ The files were served over HTTP/1.1 by nginx running on localhost, with cache en
 
 It's interesting that Chrome performs so much worse than Safari with client-zip and conflux, the two libraries that rely on WHATWG Streams and (in my case) async iterables, whereas it shows better runtimes with fflate (slightly) and JSZip (by a lot, though it may be a fluke as I did not repeat the 2-minutes long experiment), both of which use synchronous code with callbacks.
 
-Finally, I tried to run the experiment with 12k small files in Chrome, but it didn't finish after a few minutes so I gave up. Perhaps something to do with an inefficient handling of HTTP requests (I did disable network logging and enable network cache, but saw no impovement).
+Finally, I tried to run the experiment with 12k small files in Chrome, but it didn't finish after a few minutes so I gave up. Perhaps something to do with an inefficient handling of HTTP requests (I did disable network logging and enable network cache, but saw no improvement).
 
 Memory usage for any amount of data (when streaming using a ServiceWorker, or, in my test case for Zip64, deno) will remain constant or close enough. My tests maxed out at 36.1 MB of RAM while processing nearly 6 GB.
 
@@ -177,7 +177,7 @@ AES and RSA encryption could be implemented quite easily with [WebCrypto](https:
 
 The current implementation does a fair bit of ArrayBuffer copying and allocation, much of which can be avoided with brand new (and sadly not widely supported yet) browser APIs like [`TextEncoder.encodeInto`](https://encoding.spec.whatwg.org/#dom-textencoder-encodeinto), [`TextEncoderStream`](https://encoding.spec.whatwg.org/#interface-textencoderstream), [BYOB Streams](https://streams.spec.whatwg.org/#byob-readers) and [`TransformStreams`](https://streams.spec.whatwg.org/#ts-model).
 
-CRC-32 computation is, and will certainly remain, by far the largest performance bottleneck in client-zip. Currently, it is implemented with a version of Sarwate's standard algorithm in WebAssmebly. My initial experiments have shown that a naive version of the slice-by-8 algorithm runs no faster than that. I expect that slice-by-8 can ultimately quadruple the processing speed, but only if it takes advantage of the SIMD instructions in WebAssembly which, right now, are at best experimentally supported in browsers. Still, the performance gain is significant enough for client-zip that I would ship it along with the current implementation (as a fallback when SIMD is not supported).
+CRC-32 computation is, and will certainly remain, by far the largest performance bottleneck in client-zip. Currently, it is implemented with a version of Sarwate's standard algorithm in WebAssembly. My initial experiments have shown that a naive version of the slice-by-8 algorithm runs no faster than that. I expect that slice-by-8 can ultimately quadruple the processing speed, but only if it takes advantage of the SIMD instructions in WebAssembly which, right now, are at best experimentally supported in browsers. Still, the performance gain is significant enough for client-zip that I would ship it along with the current implementation (as a fallback when SIMD is not supported).
 
 # Notes
 
