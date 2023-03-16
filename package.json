@@ -5,6 +5,10 @@
   "browser": "index.js",
   "module": "index.js",
   "types": "index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
   "scripts": {
     "start": "npm run build:module && npm run build:worker",
     "build:module": "esbuild --target=es2020 --bundle src/index.ts --format=esm | terser --config-file terser.json --module -o index.js",
