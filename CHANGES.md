@@ -1,3 +1,7 @@
+## 2.3.1:
+
+* new: added type and exports to package.json so client-zip can run in Node.js.
+
 ## 2.3.0:
 
 * fixed filename extraction from a Response when its URL has a trailing slash.
