@@ -1,3 +1,13 @@
+## 1.6.0:
+
+Backported most improvements from version 2 :
+
+* minor: JavaScript CRC32 is now faster than WebAssembly.
+* new: added type and exports to package.json so client-zip can run in Node.js.
+* bugfix: remove trailing slashes from file names.
+* fixed filename extraction from a Response when its URL has a trailing slash.
+* fixed content-length prediction when some files have a length of zero (previously, this threw an error).
+
 ## 1.5.1:
 
 * fixed typings (last version incorrectly excluded ArrayBuffers, Blobs and strings as valid `input` types)

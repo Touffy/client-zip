@@ -49,6 +49,12 @@ Deno.test("the ZIP centralHeader function makes central record file headers", ()
   assertEquals(actual, expected)
 })
 
+Deno.test("the contentLength function does not throw on zero-length files", () => {
+  const actual = contentLength([{uncompressedSize: 0, encodedName: specName}])
+  const expected = 136
+  assertEquals(actual, expected)
+})
+
 Deno.test("the contentLength function accurately predicts the length of an archive", () => {
   const actual = contentLength([{uncompressedSize: zipSpec.byteLength, encodedName: specName}])
   const expected = 171462
