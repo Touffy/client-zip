@@ -1,14 +1,12 @@
-export const CRC_TABLE = (() => {
-  const table = new Uint32Array(256);
-  for (let i = 0; i < 256; ++i) {
-    let crc = i;
-    for (let j = 0; j < 8; ++j) {
-      crc = (crc >>> 1) ^ (crc & 0x01 && 0xEDB88320);
-    }
-    table[i] = crc;
+export const CRC_TABLE = new Uint32Array(256);
+
+for (let i = 0; i < 256; ++i) {
+  let crc = i;
+  for (let j = 0; j < 8; ++j) {
+    crc = (crc >>> 1) ^ (crc & 0x01 && 0xEDB88320);
   }
-  return table;
-})();
+  CRC_TABLE[i] = crc;
+}
 
 export function crc32(data: Uint8Array, crc = 0): number {
   crc = crc ^ -1;
