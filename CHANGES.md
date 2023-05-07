@@ -1,3 +1,7 @@
+## 2.4.0:
+
+* minor: JavaScript CRC32 is now faster than WebAssembly.
+
 ## 2.3.1:
 
 * new: added type and exports to package.json so client-zip can run in Node.js.
