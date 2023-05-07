@@ -34,6 +34,10 @@ Also leave the version bump
 (tagging master, updating the package.json, creating the release on GitHub and `npm publish`)
 to me. I promise I'll be quick about it.
 
+## Start with version 1 (when relevant)
+
+When your feature or bugfix does not rely on Zip64 or BigInts or something else very modern, consider basing your PR onto the [`no-zip64` branch](../../tree/no-zip64) instead of `master`.
+
 ## Code style
 
 I am not a big fan of rigid code style standards and tools like Prettier, which is why there are none in this project (well, except the one built into deno, but I don't use it). I am open to adding and/or using one eventually, if the code base and number of contributors grow enough to justify it.
