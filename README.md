@@ -7,7 +7,7 @@
 
 `client-zip` concatenates multiple files (e.g. from multiple HTTP requests) into a single ZIP, **in the browser**, so you can let your users download all the files in one click. It does *not* compress the files or unzip existing archives.
 
-`client-zip` is lightweight (4.6 kB minified, 2.1 kB gzipped), dependency-free, and 40 times faster than JSZip.
+`client-zip` is lightweight (5.7 kB minified, 2.2 kB gzipped), dependency-free, and 40 times faster than the old JSZip.
 
 * [Quick Start](#Quick-Start)
 * [Compatibility](#Compatibility)
@@ -107,36 +107,39 @@ In the case of `predictLength`, you can even save the return value and pass it l
 
 # Benchmarks
 
-I started this project because I wasn't impressed with what appeared to be the only other ZIP library for browsers, [JSZip](https://stuk.github.io/jszip/). The JSZip website acknowledges its performance limitations, but now we can actually quantify them. I later found other libraries, which I've included in the new benchmarks.
+*updated in may 2023*
 
-I requested Blob outputs from each lib, without compression. I measured the time until the blob was ready, in Safari on my MacBook Pro. Sounds fair?
+I started this project because I wasn't impressed with what — at the time — appeared to be the only other ZIP library for browsers, [JSZip](https://stuk.github.io/jszip/). I later found other libraries, which I've included in the new benchmarks, and JSZip has improved dramatically (version 3.6 was 40 times slower vs. currently only 40% slower).
 
-|                                           | baseline* | `client-zip`@2.0.0 | fflate@0.7.1 | conflux@3 | JSZip@3.6  |
-|-------------------------------------------|----------:|-------------------:|-------------:|----------:|-----------:|
-| 48.3 MB with 7 files                      |      5 ms |       360 ms (±10) |        ? |       ? | 14 686 ms (±102) |
-| 310.6 MB with 37 photos and a short video |  1 559 ms |           2 527 ms |     2 621 ms |  2 934 ms | 126 205 ms |
-| same 310.6 MB dataset but in Chrome       |  1 559 ms |           4 328 ms |     2 244 ms |  4 816 ms | 106 018 ms |
-| 137.3 MB with 12 212 small TGA graphics   |  1 954 ms |          18 190 ms |    16 183 ms | 17 831 ms | too long ! |
-| same 137.3 MB dataset in Chrome           |  1 954 ms |        too long ! |   too long ! | too long ! | too long ! |
+I requested Blob outputs from each lib, without compression. I measured the time until the blob was ready, on my M1 Pro. Sounds fair?
 
-The experiments were run about 10 times for each lib and each dataset with a few seconds of rest between each run, except JSZip for all but the first experiment because I did not have the patience. The number in the table is the median. I am no statistician but (based on the first line, where I have stable measurements for both) it looks very much like client-zip is **over 40 times faster** than JSZip 😜
+**Experiemnt 1** consists of 4 files (total 539 MB) manually added to a file input from my local filesystem, so there is no latency and the ZIP format structural overhead is insignificant.
 
-*For the baseline, I timed the `zip` process in my UNIX shell — clearly there is much room for improvement.
+**Experiemnt 2** is a set of 6214 small TGA files (total 119 MB). I tried to load them with a file input as before, but my browsers kept throwing errors while processing the large array of Files. So I had to switch to a different method, where the files are served over HTTP locally by nginx and *fetched* lazily. Unfortunately, that causes some atrocious latency across the board.
 
-The files were served over HTTP/1.1 by nginx running on localhost, with cache enabled (not that it makes a difference). The overhead of HTTP (not network, just having to go through the layers) really shows in the dataset with 12k files.
+|                    |        | `client-zip`@2.4.0 |   fflate@0.7.4  |   zip.js@2.7.6  |   conflux@4.0.3  |   JSZip@3.10.1   |
+|:-------------------|--------|-------------------:|----------------:|----------------:|-----------------:|-----------------:|
+|  **experiment 1**  | Safari |    1 833 (σ=27) ms | 2 162 (σ=15) ms | 2 171 (σ=20) ms | 2 340 (σ=113) ms | 2 937 (σ=119) ms |
+| baseline: 1 653 ms | Chrome |    2 480 (σ=41) ms |  1 601 (σ=4) ms |  1 591 (σ=6) ms |  4 268 (σ=44) ms |  3 921 (σ=15) ms |
+|  **experiment 2**  | Safari |    2 173 (σ=11) ms | 2 157 (σ=23) ms | 2 164 (σ=25) ms |  1 794 (σ=13) ms |  2 631 (σ=27) ms |
+|  baseline: 615 ms  | Chrome |    3 567 (σ=77) ms |  3 506 (σ=9) ms |  3 505 (σ=6) ms |  3 174 (σ=22) ms | 4 486 (σ=203) ms |
 
-It's interesting that Chrome performs so much worse than Safari with client-zip and conflux, the two libraries that rely on WHATWG Streams and (in my case) async iterables, whereas it shows better runtimes with fflate (slightly) and JSZip (by a lot, though it may be a fluke as I did not repeat the 2-minutes long experiment), both of which use synchronous code with callbacks.
+The experiments were run 10 times (not counting a first run to let the JavaScript engine "warm up") for each lib and each dataset. The numbers in the table are the mean time of the ten runs, with the standard deviation in parentheses.
 
-Finally, I tried to run the experiment with 12k small files in Chrome, but it didn't finish after a few minutes so I gave up. Perhaps something to do with an inefficient handling of HTTP requests (I did disable network logging and enable network cache, but saw no impovement).
+For the baseline, I timed the `zip` process in my UNIX shell. As advertised, fflate (and zip.js which uses fflate) run just as fast — in Chrome, anyway, and when there is no overhead for HTTP.
+
+Conflux does particularly well with the second experiment because it is fed by a stream of inputs, whose buffer decreases the effect of latency. That is not an intrisic advantage of Conflux but I let it keep the win because it is the only library that recommends this in its README, and it illustrates how buffering several Responses ahead of time can improve performance when dealing with many small requests.
+
+It's interesting that Chrome performs so much worse than Safari with client-zip and conflux, the two libraries that rely on WHATWG Streams and (in my case) async iterables, whereas it shows better (and extremely consistent) runtimes with fflate, which uses synchronous code with callbacks, and zip.js which actually uses fflate itself. JSZip used to be faster in Chrome than Safari, but clearly things have changed.
 
 Memory usage for any amount of data (when streaming using a ServiceWorker, or, in my test case for Zip64, deno) will remain constant or close enough. My tests maxed out at 36.1 MB of RAM while processing nearly 6 GB.
 
 Now, comparing bundle size is clearly unfair because the others do a bunch of things that my library doesn't. Here you go anyway (sizes are shown in decimal kilobytes):
 
-|                    | `client-zip`@2.0.0 | fflate@0.7.1 | conflux@3 | JSZip@3.6 |
-|--------------------|-------------------:|-------------:|----------:|----------:|
-| minified           |             4.6 kB |        29 kB |    185 kB |     96 kB |
-| minified + gzipped |             2.1 kB |        11 kB |     53 kB |     27 kB |
+|                    | `client-zip`@2.4.0 | fflate@0.7.4 | zip.js@2.7.6 | conflux@4.0.3 | JSZip@3.10.1  |
+|--------------------|-------------------:|-------------:|--------------:|--------------:|--------------:|
+| minified           |             5.7 kB |      29.8 kB |      162.3 kB |      198.8 kB |       94.9 kB |
+| minified + gzipped |             2.2 kB |        11 kB |       57.8 kB |       56.6 kB |       27.6 kB |
 
 The datasets I used in the new tests are not public domain, but nothing sensitive either ; I can send them if you ask.
 
@@ -167,7 +170,7 @@ Done.
 
 ### compression
 
-Limited use case. If the user is going to extract the archive just after downloading anyway, it's a waste of CPU. Implementation would involve WebAssembly modules for ZLIB and other possible algorithms, which are more complex than CRC32 (currently the only WebAssembly module in this library).
+Limited use case. If the user is going to extract the archive just after downloading anyway, it's a waste of CPU. Implementation should be relatively easy with the new CompressionStream API.
 
 ### encryption
 
@@ -177,21 +180,9 @@ AES and RSA encryption could be implemented quite easily with [WebCrypto](https:
 
 The current implementation does a fair bit of ArrayBuffer copying and allocation, much of which can be avoided with brand new (and sadly not widely supported yet) browser APIs like [`TextEncoder.encodeInto`](https://encoding.spec.whatwg.org/#dom-textencoder-encodeinto), [`TextEncoderStream`](https://encoding.spec.whatwg.org/#interface-textencoderstream), [BYOB Streams](https://streams.spec.whatwg.org/#byob-readers) and [`TransformStreams`](https://streams.spec.whatwg.org/#ts-model).
 
-CRC-32 computation is, and will certainly remain, by far the largest performance bottleneck in client-zip. Currently, it is implemented with a version of Sarwate's standard algorithm in WebAssmebly. My initial experiments have shown that a naive version of the slice-by-8 algorithm runs no faster than that. I expect that slice-by-8 can ultimately quadruple the processing speed, but only if it takes advantage of the SIMD instructions in WebAssembly which, right now, are at best experimentally supported in browsers. Still, the performance gain is significant enough for client-zip that I would ship it along with the current implementation (as a fallback when SIMD is not supported).
+CRC-32 computation is, and will certainly remain, by far the largest performance bottleneck in client-zip. Currently, it is implemented with a version of Sarwate's standard algorithm in JavaScript. My initial experiments have shown that a version of the slice-by-8 algorithm using SIMD instructions in WebAssembly can run a bit faster, but the previous (simpler) WASM implementation is now slower than pure JavaScript.
 
 # Notes
-
-## WebAssembly and Content Security Policy
-
-In order to load the WebAssembly module in client-zip with [Content Security Policy](https://www.w3.org/TR/CSP3/) enabled (now on by default in Chrome), you have to allow `script-src` from the origin where client-zip is fetched, with `'unsafe-wasm-eval'` (and, unfortunately, `unsafe-eval` for browsers that do not yet implement the former). Your CSP header could look like this (assuming you self-host all your scripts including client-zip) :
-
-```
-Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-wasm-eval' 'unsafe-eval'; connect-src *;
-```
-
-The `connect-src` part defines where your page can `fetch` from (`*` means "anywhere", obviously), and that's probably how you get the data for the Zip files, so be sure to set it accordingly.
-
-It is possible to avoid specifying all those unsafe (the word is a little melodramatic) policies, by using [SubResource Integrity](https://w3c.github.io/webappsec-subresource-integrity/) and `strict-dynamic` instead. If you have user-generated content embedded in your website’s HTML then you should already be well acquainted with the finer points of CSPs. If not, it’s too complicated to fit on this page.
 
 ## A note about dates
 

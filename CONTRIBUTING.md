@@ -16,12 +16,6 @@ For writing a Pull Request, basic knowledge of git and GitHub is required, thoug
 
 The bundling script uses node and a few NPM modules, but you don't really need to do any of that unless you want to publish your own version, so you shouldn't even need to run `npm install`.
 
-## WebAssembly
-
-If you want to play with the WebAssembly module or add new ones, you'll also need [the WebAssembly Binary Toolkit](https://github.com/WebAssembly/wabt). Install that using your OS's package manager. Or you could compile to WebAssembly from Rust or some other higher-level language, for which you'll need your usual toolset with LLVM.
-
-After you've compiled a WASM file, the current process involves manually copying its base64 encoding into [crc32.ts](src/crc32.ts). This is my command line: `wat2wasm src/crc32.wat && base64 crc32.wasm | pbcopy` to copy the base64 string directly to the clipboard. The reason there is no automated WASM build and bundling is because I don't want to force every contributor to install the WebAssembly toolkit.
-
 ## Compatibility
 
 If possible, ensure your code runs in the two latest major versions of Chrome, Edge, Safari and Firefox on desktop, as well as Safari for iOS and Chrome for Android.
