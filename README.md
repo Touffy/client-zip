@@ -9,6 +9,14 @@
 
 `client-zip` is lightweight (3.7 kB minified, 1.7 kB gzipped), dependency-free, and 40 times faster than JSZip.
 
+* [Quick Start](#Quick-Start)
+* [Compatibility](#Compatibility)
+* [Usage](#Usage)
+* [Benchmarks](#Benchmarks)
+* [Known Issues](#Known-Issues)
+* [Roadmap](#Roadmap)
+* [Notes and F.A.Q.](#Notes)
+
 # Quick Start
 
 ```sh
@@ -20,7 +28,7 @@ npm i client-zip@nozip64
 For direct usage with a ServiceWorker's `importScripts`, a [worker.js](https://unpkg.com/client-zip@nozip64/worker.js) file is also available alongside the module.
 
 ```javascript
-import { downloadZip } from "../node_modules/client-zip/index.js"
+import { downloadZip } from "https://cdn.jsdelivr.net/npm/client-zip@nozip64/index.js"
 
 async function downloadTestZip() {
   // define what we want in the ZIP
@@ -44,8 +52,6 @@ async function downloadTestZip() {
 # Compatibility
 
 This will only work in modern browsers with [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) support (that means no IE at all). The code relies heavily on async iterables but may be transpiled down to support browsers from as far back as mid-2015, as long as they have Streams.
-
-SSR frameworks like Next/Nuxt won’t be able to run — or even parse — client-zip on the server-side. Please look at [this issue for help on how to dynamically include client-zip in that scenario](https://github.com/Touffy/client-zip/issues/28#issuecomment-1018033984).
 
 The nozip64 release targets ES2018 and is a bare ES6 module + an IIFE version optimized for ServiceWorkers.
 
@@ -91,7 +97,7 @@ This iterable of metadata can be passed as the `metadata` property of `downloadZ
 
 In the case of `predictLength`, you can even save the return value and pass it later to `downloadZip` as the `length` option, instead of repeating the `metadata`.
 
-# Comparison with JSZip
+# Benchmarks
 
 I started this project because I wasn't impressed with what appears to be the only other ZIP library for browsers, [JSZip](https://stuk.github.io/jszip/). The JSZip website acknowledges its performance limitations, but now we can actually quantify them.
 
@@ -112,6 +118,12 @@ Now, comparing bundle size is clearly unfair because JSZip does a bunch of thing
 | bundle size        |  11 kB (33× smaller) | 366 kB |
 | minified           | 3.8 kB (25× smaller) |  96 kB |
 | minified + gzipped | 1.7 kB (16× smaller) |  27 kB |
+
+# Known Issues
+
+* client-zip cannot be bundled by SSR frameworks that expect it to run in Node.js too ([workaround](https://github.com/Touffy/client-zip/issues/28#issuecomment-1018033984)).
+* Firefox may kill a Service Worker that is still feeding a download ([workaround](https://github.com/Touffy/client-zip/issues/46#issuecomment-1259223708)).
+* Safari could not download from a Service Worker until version 15.4 (released 4 march 2022).
 
 # Roadmap
 
@@ -145,6 +157,8 @@ The current implementation does a fair bit of ArrayBuffer copying and allocation
 
 CRC-32 computation is, and will certainly remain, by far the largest performance bottleneck in client-zip. Currently, it is implemented with a version of Sarwate's standard algorithm in WebAssmebly. My initial experiments have shown that a naive version of the slice-by-8 algorithm runs no faster than that. I expect that slice-by-8 can ultimately quadruple the processing speed, but only if it takes advantage of the SIMD instructions in WebAssembly which, right now, are at best experimentally supported in browsers. Still, the performance gain is significant enough for client-zip that I would ship it along with the current implementation (as a fallback when SIMD is not supported).
 
+# Notes
+
 ## WebAssembly and Content Security Policy
 
 In order to load the WebAssembly module in client-zip with [Content Security Policy](https://www.w3.org/TR/CSP3/) enabled (now on by default in Chrome), you have to allow `script-src` from the origin where client-zip is fetched, with `'unsafe-wasm-eval'` (and, unfortunately, `unsafe-eval` for browsers that do not yet implement the former). Your CSP header could look like this (assuming you self-host all your scripts including client-zip) :
@@ -160,3 +174,7 @@ It is possible to avoid specifying all those unsafe (the word is a little melodr
 ## A note about dates
 
 The old DOS date/time format used by ZIP files is an unspecified "local time". Therefore, to ensure the best results for the end user, `client-zip` will use the client's own timezone (not UTC or something decided by the author), resulting in a ZIP archive that varies across different clients. If you write integration tests that expect an exact binary content, make sure you set the machine running the tests to the same timezone as the one that generated the expected content.
+
+## How can I include folders in the archive ?
+
+Just include the folder hierarchy in its content's filenames (e.g. `{ name: "folder/file.ext", input }` will implicitly create "folder/" and place "file.ext" in it). Forward slashes even for Windows users !
