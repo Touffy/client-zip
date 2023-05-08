@@ -2,9 +2,9 @@ name: Test
 
 on:
   push:
-    branches: [master]
+    branches: [master, no-zip64]
   pull_request:
-    branches: [master]
+    branches: [master, no-zip64]
 
 jobs:
   test:
