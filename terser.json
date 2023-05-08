@@ -4,7 +4,7 @@
   "mangle": {
     "reserved": ["m", "c"],
     "properties": {
-      "regex": "^crc$|^uncompressedSize$|^modDate$|^bytes$|^encodedName$"
+      "regex": "^crc$|^uncompressedSize$|^modDate$|^bytes$|^encodedName$|^isEncodedNameUtf8$"
     }
   }
 }

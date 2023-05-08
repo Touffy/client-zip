@@ -72,7 +72,7 @@ function predictLength(metadata: Iterable<MetadataTypes>): number
   - `lastModified`: last modification date of the file (defaults to `new Date()` unless the input is a File or Response with a valid "Last-Modified" header)
   - `input`: something that contains your data; it can be a `File`, a `Blob`, a `Response`, some kind of `ArrayView` or a raw `ArrayBuffer`, a `ReadableStream<Uint8Array>` (yes, only Uint8Arrays, but most APIs give you just that type anyway), an `AsyncIterable<ArrayBuffer | ArrayView | string>`, … or just a string.
 
-The *options* argument currently supports two properties, `length` and `metadata` (see [Content-Length prediction](#content-length-prediction) just below).
+The *options* argument currently supports three properties, `length`, `metadata` (see [Content-Length prediction](#content-length-prediction)) and `useLanguageEncodingFlag` (see [Filename encoding](#filename-encoding)).
 
 The function returns a `Response` immediately. You don't need to wait for the whole ZIP to be ready. It's up to you if you want to pipe the Response somewhere (e.g. if you are using `client-zip` inside a ServiceWorker) or let the browser buffer it all in a Blob.
 
@@ -97,7 +97,12 @@ This iterable of metadata can be passed as the `metadata` property of `downloadZ
 
 In the case of `predictLength`, you can even save the return value and pass it later to `downloadZip` as the `length` option, instead of repeating the `metadata`.
 
-# Benchmarks
+## Filename encoding
+ In ZIP archives *language encoding flag* can be used to indicate that a filename is encoded in UTF-8. `client-zip` encodes filenames in UTF-8 and sets this flag by default. Some ZIP archive programs (e.g. build-in ZIP archive viewer in Windows) might not decode filenames correctly if this flag is off. However, you can turn off the *language encoding flag* feature by setting `useLanguageEncodingFlag` to `false` in the *options* if needed.
+
+ If a filename type is `Uint8Array` then the flag is off for that file regardless of the value of `useLanguageEncodingFlag` since the encoding of the filename might not be UTF-8.
+ 
+ # Benchmarks
 
 *updated in may 2023*
 

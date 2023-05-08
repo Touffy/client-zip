@@ -18,13 +18,16 @@ type JustMeta = { input?: StreamLike | undefined, name: any, lastModified?: any,
 
 type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
 
-type Options = {
+export type Options = {
   /** If provided, the returned Response will have its `Content-Length` header set to this value.
    * It can be computed accurately with the `predictLength` function. */
   length?: number
   /** If provided, the returned Response will have its `Content-Length` header set to the result of
    * calling `predictLength` on that metadata. Overrides the `length` option. */
   metadata?: Iterable<InputWithMeta | InputWithSizeMeta | JustMeta>
+  /** Set to `false` to turn off the *language encoding flag*. By default it is on unless
+   * filename is a `Uint8Array`. */
+  useLanguageEncodingFlag?: boolean
 }
 
 function normalizeArgs(file: InputWithMeta | InputWithSizeMeta | InputWithoutMeta | JustMeta) {
@@ -56,5 +59,5 @@ export function downloadZip(files: ForAwaitable<InputWithMeta | InputWithSizeMet
   const headers: Record<string, any> = { "Content-Type": "application/zip", "Content-Disposition": "attachment" }
   if (Number.isInteger(options.length) && options.length! > 0) headers["Content-Length"] = options.length
   if (options.metadata) headers["Content-Length"] = predictLength(options.metadata)
-  return new Response(ReadableFromIter(loadFiles(mapFiles(files))), { headers })
+  return new Response(ReadableFromIter(loadFiles(mapFiles(files), options)), { headers })
 }
