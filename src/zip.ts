@@ -3,6 +3,7 @@ import { crc32 } from "./crc32.ts"
 import { formatDOSDateTime } from "./datetime.ts"
 import type { ZipEntryDescription, ZipFileDescription } from "./input.ts"
 import { Metadata } from "./metadata.ts"
+import { Options } from "./index.ts"
 
 const fileHeaderSignature = 0x504b_0304, fileHeaderLength = 30
 const descriptorSignature = 0x504b_0708, descriptorLength = 16
@@ -15,7 +16,7 @@ export type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
 
 type Zip64FieldLength = 0 | 12 | 28
 
-export function contentLength(files: Iterable<Metadata>) {
+export function contentLength(files: Iterable<Omit<Metadata, 'nameIsBuffer'>>) {
   let centralLength = BigInt(endLength)
   let offset = 0n
   let archiveNeedsZip64 = false
@@ -36,7 +37,18 @@ export function contentLength(files: Iterable<Metadata>) {
   return centralLength + offset
 }
 
-export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metadata>) {
+export function flagNameUTF8({encodedName, nameIsBuffer}: Metadata, buffersAreUTF8?: boolean) {
+  // @ts-ignore
+  return (!nameIsBuffer || (buffersAreUTF8 ?? tryUTF8(encodedName))) * 0b1000
+}
+const UTF8Decoder = new TextDecoder('utf8', { fatal: true })
+function tryUTF8(str: Uint8Array) {
+  try { UTF8Decoder.decode(str) }
+  catch { return false }
+  return true
+}
+
+export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metadata>, options: Options) {
   const centralRecord: Uint8Array[] = []
   let offset = 0n
   let fileCount = 0n
@@ -44,7 +56,8 @@ export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metad
 
   // write files
   for await (const file of files) {
-    yield fileHeader(file)
+    const flags = flagNameUTF8(file, options.buffersAreUTF8)
+    yield fileHeader(file, flags)
     yield file.encodedName
     if (file.isFile) {
       yield* fileData(file)
@@ -55,7 +68,7 @@ export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metad
     const zip64HeaderLength = (bigOffset * 12 | bigFile * 28) as Zip64FieldLength
     yield dataDescriptor(file, bigFile)
 
-    centralRecord.push(centralHeader(file, offset, zip64HeaderLength))
+    centralRecord.push(centralHeader(file, offset, flags, zip64HeaderLength))
     centralRecord.push(file.encodedName)
     if (zip64HeaderLength) centralRecord.push(zip64ExtraField(file, offset, zip64HeaderLength))
     if (bigFile) offset += 8n // because the data descriptor will have 64-bit sizes
@@ -102,10 +115,10 @@ export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metad
   yield makeUint8Array(end)
 }
 
-export function fileHeader(file: ZipEntryDescription & Metadata) {
+export function fileHeader(file: ZipEntryDescription & Metadata, flags = 0) {
   const header = makeBuffer(fileHeaderLength)
   header.setUint32(0, fileHeaderSignature)
-  header.setUint32(4, 0x2d_00_0800) // ZIP version 4.5 | flags, bit 3 on = size and CRCs will be zero
+  header.setUint32(4, 0x2d_00_0800 | flags) // ZIP version 4.5 | flags, bit 3 on = size and CRCs will be zero
   // leave compression = zero (2 bytes) until we implement compression
   formatDOSDateTime(file.modDate, header, 10)
   // leave CRC = zero (4 bytes) because we'll write it later, in the central repo
@@ -149,11 +162,11 @@ export function dataDescriptor(file: ZipEntryDescription & Metadata, needsZip64:
   return makeUint8Array(header)
 }
 
-export function centralHeader(file: ZipEntryDescription & Metadata, offset: bigint, zip64HeaderLength: Zip64FieldLength = 0) {
+export function centralHeader(file: ZipEntryDescription & Metadata, offset: bigint, flags = 0, zip64HeaderLength: Zip64FieldLength = 0) {
   const header = makeBuffer(centralHeaderLength)
   header.setUint32(0, centralHeaderSignature)
   header.setUint32(4, 0x2d03_2d_00) // UNIX app version 4.5 | ZIP version 4.5
-  header.setUint16(8, 0x0800) // flags, bit 3 on
+  header.setUint16(8, 0x0800 | flags) // flags, bit 3 on
   // leave compression = zero (2 bytes) until we implement compression
   formatDOSDateTime(file.modDate, header, 12)
   header.setUint32(16, file.isFile ? file.crc! : 0, true)

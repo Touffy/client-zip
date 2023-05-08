@@ -19,13 +19,19 @@ type InputFolder = { name: any, lastModified?: any, input?: never, size?: never 
 /** Both filename and size must be provided ; input is not helpful here. */
 type JustMeta = { input?: StreamLike | undefined, name: any, lastModified?: any, size: number | bigint }
 
-type Options = {
+export type Options = {
   /** If provided, the returned Response will have its `Content-Length` header set to this value.
    * It can be computed accurately with the `predictLength` function. */
   length?: number | bigint
   /** If provided, the returned Response will have its `Content-Length` header set to the result of
    * calling `predictLength` on that metadata. Overrides the `length` option. */
   metadata?: Iterable<InputWithMeta | InputWithSizeMeta | JustMeta>
+  /** The ZIP *language encoding flag* will always be set when a filename was given as a string,
+   * but when it is given as an ArrayView or ArrayBuffer, it depends on this option :
+   * - `true`: always on (ArrayBuffers will *always* be flagged as UTF-8) — recommended,
+   * - `false`: always off (ArrayBuffers will *never* be flagged as UTF-8),
+   * - `undefined`: each ArrayBuffer will be tested and flagged if it is valid UTF-8. */
+  buffersAreUTF8?: boolean
 }
 
 function normalizeArgs(file: InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder | JustMeta) {
@@ -57,9 +63,9 @@ export function downloadZip(files: ForAwaitable<InputWithMeta | InputWithSizeMet
   const headers: Record<string, any> = { "Content-Type": "application/zip", "Content-Disposition": "attachment" }
   if ((typeof options.length === "bigint" || Number.isInteger(options.length)) && options.length! > 0) headers["Content-Length"] = String(options.length)
   if (options.metadata) headers["Content-Length"] = String(predictLength(options.metadata))
-  return new Response(makeZip(files), { headers })
+  return new Response(makeZip(files, options), { headers })
 }
 
-export function makeZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>) {
-  return ReadableFromIter(loadFiles(mapFiles(files)));
+export function makeZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, options: Options = {}) {
+  return ReadableFromIter(loadFiles(mapFiles(files), options));
 }

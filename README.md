@@ -63,7 +63,7 @@ The module exports three functions:
 ```typescript
 function downloadZip(files: ForAwaitable<InputTypes>, options?: Options): Response
 
-function makeZip(files: ForAwaitable<InputTypes>): ReadableStream
+function makeZip(files: ForAwaitable<InputTypes>, options?: Options): ReadableStream
 
 function predictLength(metadata: Iterable<MetadataTypes>): bigint
 ```
@@ -76,7 +76,7 @@ function predictLength(metadata: Iterable<MetadataTypes>): bigint
   - `lastModified`: last modification date of the file (defaults to `new Date()` unless the input is a File or Response with a valid "Last-Modified" header)
   - `input`: something that contains your data; it can be a `File`, a `Blob`, a `Response`, some kind of `ArrayView` or a raw `ArrayBuffer`, a `ReadableStream<Uint8Array>` (yes, only Uint8Arrays, but most APIs give you just that type anyway), an `AsyncIterable<ArrayBuffer | ArrayView | string>`, … or just a string.
 
-The *options* argument currently supports two properties, `length` and `metadata` (see [Content-Length prediction](#content-length-prediction) just below).
+The *options* argument currently supports three properties, `length`, `metadata` (see [Content-Length prediction](#content-length-prediction)) and `buffersAreUTF8` (see [Filename encoding](#filename-encoding)).
 
 The function returns a `Response` immediately. You don't need to wait for the whole ZIP to be ready. It's up to you if you want to pipe the Response somewhere (e.g. if you are using `client-zip` inside a ServiceWorker) or let the browser buffer it all in a Blob.
 
@@ -104,6 +104,18 @@ An object with a *name* but no *input* and no *size* (not even zero) will be int
 This iterable of metadata can be passed as the `metadata` property of `downloadZip`'s *options*, or, if you want to display the predicted size without actually creating the Zip file, to the `predictLength` function (not exposed in the worker script). Naturally, the metadata and actual data must match, and be **provided in the same order!** Otherwise, there could be inaccuracies in Zip64 lengths.
 
 In the case of `predictLength`, you can even save the return value and pass it later to `downloadZip` as the `length` option, instead of repeating the `metadata`.
+
+## Filename encoding
+
+(tl;dr: set `buffersAreUTF8: true` in the *options* argument)
+
+In ZIP archives, the *language encoding flag* indicates that a filename is encoded in UTF-8. Some ZIP archive programs (e.g. build-in ZIP archive viewer in Windows) might not decode UTF-8 filenames correctly if this flag is off.
+
+`client-zip` always encodes **string** filenames (including filenames extracted from URLs) as UTF-8 and sets this flag for the related entries. However, `downloadZip`'s *options* include a `buffersAreUTF8` setting, affecting filenames that you supply as an **ArrayBuffer** (or ArrayView).
+
+By default (when `buffersAreUTF8` is not set or `undefined`), each ArrayBuffer filename will be tested, and flagged only if it is valid UTF-8. It is a safe default, but a little inefficient because UTF-8 is the only thing you can get in most contexts anyway. So you may tell client-zip to skip the test by setting `buffersAreUTF8: true` ; ArrayBuffers will *always* be flagged as UTF-8 without checking.
+
+<small>If you happen to get your filenames from a dusty API reading from an antique filesystem with non-ASCII filenames encoded in some retro 8-bit encoding and you want to keep them that way in the ZIP archive, you may set `buffersAreUTF8: false` ; ArrayBuffer filenames will *never* be flagged as UTF-8. Please beware that the stored filenames will extract correctly only with a ZIP program using the same system encoding as the source.</small>
 
 # Benchmarks
 
@@ -138,7 +150,7 @@ In a different experiment using Deno to avoid storing very large output files, m
 
 Now, comparing bundle size is clearly unfair because the others do a bunch of things that my library doesn't. Here you go anyway (sizes are shown in decimal kilobytes):
 
-|                    | `client-zip`@2.4.0 | fflate@0.7.4 | zip.js@2.7.6 | conflux@4.0.3 | JSZip@3.10.1  |
+|                    | `client-zip`@2.4.2 | fflate@0.7.4 | zip.js@2.7.6 | conflux@4.0.3 | JSZip@3.10.1  |
 |--------------------|-------------------:|-------------:|--------------:|--------------:|--------------:|
 | minified           |             5.7 kB |      29.8 kB |      162.3 kB |      198.8 kB |       94.9 kB |
 | minified + gzipped |             2.2 kB |        11 kB |       57.8 kB |       56.6 kB |       27.6 kB |

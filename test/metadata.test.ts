@@ -16,7 +16,7 @@ Deno.test("normalizeMetadata guesses filename from Content-Disposition", () => {
   const metadata = normalizeMetadata(new Response("four", {
     headers: { "content-disposition": "attachment; filename=test.txt" }
   }))
-  assertEquals(metadata, { uncompressedSize: 0n, encodedName })
+  assertEquals(metadata, { uncompressedSize: 0n, encodedName, nameIsBuffer: false })
 })
 
 Deno.test("normalizeMetadata guesses filename from a Response URL", () => {
@@ -25,7 +25,7 @@ Deno.test("normalizeMetadata guesses filename from a Response URL", () => {
     headers: { get() { return new Headers() } }
   })
   const metadata = normalizeMetadata(response)
-  assertEquals(metadata, { uncompressedSize: 0n, encodedName })
+  assertEquals(metadata, { uncompressedSize: 0n, encodedName, nameIsBuffer: false })
 })
 
 Deno.test("normalizeMetadata guesses filename from a Response URL with trailing slash", () => {
@@ -34,24 +34,24 @@ Deno.test("normalizeMetadata guesses filename from a Response URL with trailing 
     headers: { get() { return new Headers() } }
   })
   const metadata = normalizeMetadata(response)
-  assertEquals(metadata, { uncompressedSize: 0n, encodedName })
+  assertEquals(metadata, { uncompressedSize: 0n, encodedName, nameIsBuffer: false })
 })
 
 /**************************************   Files   **************************************/
 
 Deno.test("normalizeMetadata reads filename and size from a File", () => {
   const metadata = normalizeMetadata(new File(["four"], "test.txt"))
-  assertEquals(metadata, { uncompressedSize: 4n, encodedName })
+  assertEquals(metadata, { uncompressedSize: 4n, encodedName, nameIsBuffer: false })
 })
 
 /**************************************  Folders  **************************************/
 
 Deno.test("normalizeMetadata fixes trailing slashes in folder names", () => {
   const metadata = normalizeMetadata(undefined, new TextEncoder().encode("root/folder"))
-  assertEquals(metadata, { uncompressedSize: 0n, encodedName: encodedFolderName })
+  assertEquals(metadata, { uncompressedSize: 0n, encodedName: encodedFolderName, nameIsBuffer: true })
 })
 
 Deno.test("normalizeMetadata fixes trailing slashes in file names", () => {
   const metadata = normalizeMetadata(undefined, encodedFolderName, 0n)
-  assertEquals(metadata, { uncompressedSize: 0n, encodedName: new TextEncoder().encode("root/folder") })
+  assertEquals(metadata, { uncompressedSize: 0n, encodedName: new TextEncoder().encode("root/folder"), nameIsBuffer: true })
 })
