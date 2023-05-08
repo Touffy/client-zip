@@ -3,6 +3,7 @@ import { crc32 } from "./crc32.ts"
 import { formatDOSDateTime } from "./datetime.ts"
 import { ZipFileDescription } from "./input.ts"
 import { Metadata } from "./metadata.ts"
+import { Options } from "./index.ts"
 
 const fileHeaderSignature = 0x504b_0304, fileHeaderLength = 30
 const descriptorSignature = 0x504b_0708, descriptorLength = 16
@@ -21,19 +22,31 @@ export function contentLength(files: Iterable<Metadata>) {
   return length
 }
 
-export async function* loadFiles(files: AsyncIterable<ZipFileDescription & Metadata>) {
+export function flagNameUTF8({encodedName, nameIsBuffer}: Metadata, buffersAreUTF8?: boolean) {
+  // @ts-ignore
+  return (!nameIsBuffer || (buffersAreUTF8 ?? tryUTF8(encodedName))) * 0b1000
+}
+const UTF8Decoder = new TextDecoder('utf8', { fatal: true })
+function tryUTF8(str: Uint8Array) {
+  try { UTF8Decoder.decode(str) }
+  catch { return false }
+  return true
+}
+
+export async function* loadFiles(files: AsyncIterable<ZipFileDescription & Metadata>, options: Options) {
   const centralRecord: Uint8Array[] = []
   let offset = 0
   let fileCount = 0
 
   // write files
   for await (const file of files) {
-    yield fileHeader(file)
+    const flags = flagNameUTF8(file, options.buffersAreUTF8)
+    yield fileHeader(file, flags)
     yield file.encodedName
     yield* fileData(file)
     yield dataDescriptor(file)
 
-    centralRecord.push(centralHeader(file, offset))
+    centralRecord.push(centralHeader(file, offset, flags))
     centralRecord.push(file.encodedName)
     fileCount++
     offset += fileHeaderLength + descriptorLength + file.encodedName.length + file.uncompressedSize!
@@ -58,10 +71,10 @@ export async function* loadFiles(files: AsyncIterable<ZipFileDescription & Metad
   yield makeUint8Array(end)
 }
 
-export function fileHeader(file: ZipFileDescription & Metadata) {
+export function fileHeader(file: ZipFileDescription & Metadata, flags = 0) {
   const header = makeBuffer(fileHeaderLength)
   header.setUint32(0, fileHeaderSignature)
-  header.setUint32(4, 0x14_00_0800) // ZIP version 2.0 | flags, bit 3 on = size and CRCs will be zero
+  header.setUint32(4, 0x14_00_0800 | flags) // ZIP version 2.0 | flags, bit 3 on = size and CRCs will be zero
   // leave compression = zero (2 bytes) until we implement compression
   formatDOSDateTime(file.modDate, header, 10)
   // leave CRC = zero (4 bytes) because we'll write it later, in the central repo
@@ -100,11 +113,11 @@ export function dataDescriptor(file: ZipFileDescription & Metadata) {
   return makeUint8Array(header)
 }
 
-export function centralHeader(file: ZipFileDescription & Metadata, offset: number) {
+export function centralHeader(file: ZipFileDescription & Metadata, offset: number, flags = 0) {
   const header = makeBuffer(centralHeaderLength)
   header.setUint32(0, centralHeaderSignature)
   header.setUint32(4, 0x1503_14_00) // UNIX app version 2.1 | ZIP version 2.0
-  header.setUint16(8, 0x0800) // flags, bit 3 on
+  header.setUint16(8, 0x0800 | flags) // flags, bit 3 on
   // leave compression = zero (2 bytes) until we implement compression
   formatDOSDateTime(file.modDate, header, 12)
   header.setUint32(16, file.crc!, true)

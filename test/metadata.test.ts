@@ -15,7 +15,7 @@ Deno.test("normalizeMetadata guesses filename from Content-Disposition", () => {
   const metadata = normalizeMetadata(new Response("four", {
     headers: { "content-disposition": "attachment; filename=test.txt" }
   }))
-  assertEquals(metadata, { uncompressedSize: 0, encodedName })
+  assertEquals(metadata, { uncompressedSize: 0, encodedName, nameIsBuffer: false })
 })
 
 Deno.test("normalizeMetadata guesses filename from a Response URL", () => {
@@ -24,7 +24,7 @@ Deno.test("normalizeMetadata guesses filename from a Response URL", () => {
     headers: { get() { return new Headers() } }
   })
   const metadata = normalizeMetadata(response)
-  assertEquals(metadata, { uncompressedSize: 0, encodedName })
+  assertEquals(metadata, { uncompressedSize: 0, encodedName, nameIsBuffer: false })
 })
 
 Deno.test("normalizeMetadata guesses filename from a Response URL with trailing slash", () => {
@@ -33,12 +33,12 @@ Deno.test("normalizeMetadata guesses filename from a Response URL with trailing 
     headers: { get() { return new Headers() } }
   })
   const metadata = normalizeMetadata(response)
-  assertEquals(metadata, { uncompressedSize: 0, encodedName })
+  assertEquals(metadata, { uncompressedSize: 0, encodedName, nameIsBuffer: false })
 })
 
 /**************************************   Files   **************************************/
 
 Deno.test("normalizeMetadata reads filename and size from a File", () => {
   const metadata = normalizeMetadata(new File(["four"], "test.txt"))
-  assertEquals(metadata, { uncompressedSize: 4, encodedName })
+  assertEquals(metadata, { uncompressedSize: 4, encodedName, nameIsBuffer: false })
 })
