@@ -63,6 +63,10 @@ export function ReadableFromIter<T extends BufferLike>(iter: AsyncIterable<T> | 
           break
         }
       }
+    },
+    async cancel(err) {
+      try { await gen.throw?.(err) }
+      catch(_) {}
     }
   })
 }
