@@ -109,22 +109,24 @@ I requested Blob outputs from each lib, without compression. I measured the time
 
 **Experiemnt 2** is a set of 6214 small TGA files (total 119 MB). I tried to load them with a file input as before, but my browsers kept throwing errors while processing the large array of Files. So I had to switch to a different method, where the files are served over HTTP locally by nginx and *fetched* lazily. Unfortunately, that causes some atrocious latency across the board.
 
-|                    |        | `client-zip`@1.6.0 |   fflate@0.7.4  |   zip.js@2.7.6  |   conflux@4.0.3  |   JSZip@3.10.1   |
-|:-------------------|--------|-------------------:|----------------:|----------------:|-----------------:|-----------------:|
-|  **experiment 1**  | Safari |    1 833 (σ=27) ms | 2 162 (σ=15) ms | 2 171 (σ=20) ms | 2 340 (σ=113) ms | 2 937 (σ=119) ms |
-| baseline: 1 653 ms | Chrome |    2 480 (σ=41) ms |  1 601 (σ=4) ms |  1 591 (σ=6) ms |  4 268 (σ=44) ms |  3 921 (σ=15) ms |
-|  **experiment 2**  | Safari |    2 173 (σ=11) ms | 2 157 (σ=23) ms | 2 164 (σ=25) ms |  1 794 (σ=13) ms |  2 631 (σ=27) ms |
-|  baseline: 615 ms  | Chrome |    3 567 (σ=77) ms |  3 506 (σ=9) ms |  3 505 (σ=6) ms |  3 174 (σ=22) ms | 4 486 (σ=203) ms |
+|                   |        | `client-zip`@1.6.0 |  fflate@0.7.4  |  zip.js@2.7.6  |  conflux@4.0.3  |  JSZip@3.10.1   |
+|:------------------|--------|-------------------:|---------------:|---------------:|----------------:|----------------:|
+|  **experiment 1** | Safari |     1.647 (σ=21) s | 1.792 (σ=15) s | 1.912 (σ=80) s |  1.820 (σ=16) s |  2.122 (σ=60) s |
+| baseline: 1.653 s | Chrome |     2.480 (σ=41) s |  1.601 (σ=4) s | 4.251 (σ=53) s |  4.268 (σ=44) s |  3.921 (σ=15) s |
+|  **experiment 2** | Safari |     2.173 (σ=11) s | 2.157 (σ=23) s | 3.158 (σ=17) s |  1.794 (σ=13) s |  2.631 (σ=27) s |
+| baseline: 0.615 s | Chrome |     3.567 (σ=77) s |  3.506 (σ=9) s | 5.689 (σ=17) s |  3.174 (σ=22) s |  4.602 (σ=50) s |
 
-The experiments were run 10 times (not counting a first run to let the JavaScript engine "warm up") for each lib and each dataset. The numbers in the table are the mean time of the ten runs, with the standard deviation in parentheses.
+The experiments were run 10 times (not counting a first run to let the JavaScript engine "warm up") for each lib and each dataset, *with the dev tools closed* (this is important, opening the dev tools has a noticeable impact on CPU and severe impact on HTTP latency). The numbers in the table are the mean time of the ten runs, with the standard deviation in parentheses.
 
-For the baseline, I timed the `zip` process in my UNIX shell. As advertised, fflate (and zip.js which uses fflate) run just as fast — in Chrome, anyway, and when there is no overhead for HTTP.
+For the baseline, I timed the `zip` process in my UNIX shell. As advertised, fflate run just as fast — in Chrome, anyway, and when there is no overhead for HTTP (experiment 1). In the same test, client-zip beats everyone else in Safari.
 
 Conflux does particularly well with the second experiment because it is fed by a stream of inputs, whose buffer decreases the effect of latency. That is not an intrisic advantage of Conflux but I let it keep the win because it is the only library that recommends this in its README, and it illustrates how buffering several Responses ahead of time can improve performance when dealing with many small requests.
 
-It's interesting that Chrome performs so much worse than Safari with client-zip and conflux, the two libraries that rely on WHATWG Streams and (in my case) async iterables, whereas it shows better (and extremely consistent) runtimes with fflate, which uses synchronous code with callbacks, and zip.js which actually uses fflate itself. JSZip used to be faster in Chrome than Safari, but clearly things have changed.
+Zip.js workers were disabled because I didn't want to bother fixing the error I got from the library. Using workers on this task could only help by sacrificing lots of memory, anyway. But I suppose Zip.js really needs those workers to offset its disgraceful single-threaded performance.
 
-Memory usage for any amount of data (when streaming using a ServiceWorker, or, in my test case for Zip64, deno) will remain constant or close enough. My tests maxed out at 36.1 MB of RAM while processing nearly 6 GB.
+It's interesting that Chrome performs so much worse than Safari with client-zip and conflux, the two libraries that rely on WHATWG Streams and (in my case) async iterables, whereas it shows better (and extremely consistent) runtimes with fflate, which uses synchronous code with callbacks. Zip.js and JSZip used to be faster in Chrome than Safari, but clearly things have changed.
+
+In a different experiment using Deno to avoid storing very large output files, memory usage for any amount of data remained constant or close enough. My tests maxed out at 36.1 MB of RAM while processing nearly 6 GB.
 
 Now, comparing bundle size is clearly unfair because the others do a bunch of things that my library doesn't. Here you go anyway (sizes are shown in decimal kilobytes):
 
