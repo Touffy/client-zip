@@ -1,3 +1,7 @@
+## 1.6.1:
+
+* bugfix: cancelling the output stream will now cause an error in the source iterator
+
 ## 1.6.0:
 
 Backported most improvements from version 2 :
