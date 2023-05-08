@@ -25,9 +25,12 @@ export type Options = {
   /** If provided, the returned Response will have its `Content-Length` header set to the result of
    * calling `predictLength` on that metadata. Overrides the `length` option. */
   metadata?: Iterable<InputWithMeta | InputWithSizeMeta | JustMeta>
-  /** Set to `false` to turn off the *language encoding flag*. By default it is on unless
-   * filename is a `Uint8Array`. */
-  useLanguageEncodingFlag?: boolean
+  /** The ZIP *language encoding flag* will always be set when a filename was given as a string,
+   * but when it is given as an ArrayView or ArrayBuffer, it depends on this option :
+   * - `true`: always on (ArrayBuffers will *always* be flagged as UTF-8) — recommended,
+   * - `false`: always off (ArrayBuffers will *never* be flagged as UTF-8),
+   * - `undefined`: each ArrayBuffer will be tested and flagged if it is valid UTF-8. */
+  buffersAreUTF8?: boolean
 }
 
 function normalizeArgs(file: InputWithMeta | InputWithSizeMeta | InputWithoutMeta | JustMeta) {

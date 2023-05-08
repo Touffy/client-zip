@@ -7,7 +7,7 @@
 
 `client-zip` concatenates multiple files (e.g. from multiple HTTP requests) into a single ZIP, **in the browser**, so you can let your users download all the files in one click. It does *not* compress the files or unzip existing archives.
 
-`client-zip` is lightweight (4.2 kB minified, 2.0 kB gzipped), dependency-free, and 40 times faster than the old JSZip.
+`client-zip` is lightweight (4.6 kB minified, 2.1 kB gzipped), dependency-free, and 40 times faster than the old JSZip.
 
 * [Quick Start](#Quick-Start)
 * [Compatibility](#Compatibility)
@@ -72,7 +72,7 @@ function predictLength(metadata: Iterable<MetadataTypes>): number
   - `lastModified`: last modification date of the file (defaults to `new Date()` unless the input is a File or Response with a valid "Last-Modified" header)
   - `input`: something that contains your data; it can be a `File`, a `Blob`, a `Response`, some kind of `ArrayView` or a raw `ArrayBuffer`, a `ReadableStream<Uint8Array>` (yes, only Uint8Arrays, but most APIs give you just that type anyway), an `AsyncIterable<ArrayBuffer | ArrayView | string>`, … or just a string.
 
-The *options* argument currently supports three properties, `length`, `metadata` (see [Content-Length prediction](#content-length-prediction)) and `useLanguageEncodingFlag` (see [Filename encoding](#filename-encoding)).
+The *options* argument currently supports three properties, `length`, `metadata` (see [Content-Length prediction](#content-length-prediction)) and `buffersAreUTF8` (see [Filename encoding](#filename-encoding)).
 
 The function returns a `Response` immediately. You don't need to wait for the whole ZIP to be ready. It's up to you if you want to pipe the Response somewhere (e.g. if you are using `client-zip` inside a ServiceWorker) or let the browser buffer it all in a Blob.
 
@@ -98,11 +98,18 @@ This iterable of metadata can be passed as the `metadata` property of `downloadZ
 In the case of `predictLength`, you can even save the return value and pass it later to `downloadZip` as the `length` option, instead of repeating the `metadata`.
 
 ## Filename encoding
- In ZIP archives *language encoding flag* can be used to indicate that a filename is encoded in UTF-8. `client-zip` encodes filenames in UTF-8 and sets this flag by default. Some ZIP archive programs (e.g. build-in ZIP archive viewer in Windows) might not decode filenames correctly if this flag is off. However, you can turn off the *language encoding flag* feature by setting `useLanguageEncodingFlag` to `false` in the *options* if needed.
 
- If a filename type is `Uint8Array` then the flag is off for that file regardless of the value of `useLanguageEncodingFlag` since the encoding of the filename might not be UTF-8.
- 
- # Benchmarks
+(tl;dr: set `buffersAreUTF8: true` in the *options* argument)
+
+In ZIP archives, the *language encoding flag* indicates that a filename is encoded in UTF-8. Some ZIP archive programs (e.g. build-in ZIP archive viewer in Windows) might not decode UTF-8 filenames correctly if this flag is off.
+
+`client-zip` always encodes **string** filenames (including filenames extracted from URLs) as UTF-8 and sets this flag for the related entries. However, `downloadZip`'s *options* include a `buffersAreUTF8` setting, affecting filenames that you supply as an **ArrayBuffer** (or ArrayView).
+
+By default (when `buffersAreUTF8` is not set or `undefined`), each ArrayBuffer filename will be tested, and flagged only if it is valid UTF-8. It is a safe default, but a little inefficient because UTF-8 is the only thing you can get in most contexts anyway. So you may tell client-zip to skip the test by setting `buffersAreUTF8: true` ; ArrayBuffers will *always* be flagged as UTF-8 without checking.
+
+<small>If you happen to get your filenames from a dusty API reading from an antique filesystem with non-ASCII filenames encoded in some retro 8-bit encoding and you want to keep them that way in the ZIP archive, you may set `buffersAreUTF8: false` ; ArrayBuffer filenames will *never* be flagged as UTF-8. Please beware that the stored filenames will extract correctly only with a ZIP program using the same system encoding as the source.</small>
+
+# Benchmarks
 
 *updated in may 2023*
 
@@ -135,10 +142,10 @@ In a different experiment using Deno to avoid storing very large output files, m
 
 Now, comparing bundle size is clearly unfair because the others do a bunch of things that my library doesn't. Here you go anyway (sizes are shown in decimal kilobytes):
 
-|                    | `client-zip`@1.6.0 | fflate@0.7.4 | zip.js@2.7.6 | conflux@4.0.3 | JSZip@3.10.1  |
+|                    | `client-zip`@1.6.2 | fflate@0.7.4 | zip.js@2.7.6 | conflux@4.0.3 | JSZip@3.10.1  |
 |--------------------|-------------------:|-------------:|--------------:|--------------:|--------------:|
-| minified           |             4.2 kB |      29.8 kB |      162.3 kB |      198.8 kB |       94.9 kB |
-| minified + gzipped |             2.0 kB |        11 kB |       57.8 kB |       56.6 kB |       27.6 kB |
+| minified           |             4.6 kB |      29.8 kB |      162.3 kB |      198.8 kB |       94.9 kB |
+| minified + gzipped |             2.1 kB |        11 kB |       57.8 kB |       56.6 kB |       27.6 kB |
 
 The datasets I used in the new tests are not public domain, but nothing sensitive either ; I can send them if you ask.
 
