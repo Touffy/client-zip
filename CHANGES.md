@@ -1,3 +1,7 @@
+## 2.4.1:
+
+* bugfix: cancelling the output stream will now cause an error in the source iterator
+
 ## 2.4.0:
 
 * minor: JavaScript CRC32 is now faster than WebAssembly.
