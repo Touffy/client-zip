@@ -1,3 +1,9 @@
+## 2.4.2:
+
+* new: filenames can be flagged as UTF-8 using the EFS bit in the file header flags
+  - this is configurable with the new `buffersAreUTF8` option
+* and it should help the Windows Zip utility read non-ASCII filenames correctly
+
 ## 2.4.1:
 
 * bugfix: cancelling the output stream will now cause an error in the source iterator

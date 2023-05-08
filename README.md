@@ -7,7 +7,7 @@
 
 `client-zip` concatenates multiple files (e.g. from multiple HTTP requests) into a single ZIP, **in the browser**, so you can let your users download all the files in one click. It does *not* compress the files or unzip existing archives.
 
-`client-zip` is lightweight (5.7 kB minified, 2.2 kB gzipped), dependency-free, and 40 times faster than the old JSZip.
+`client-zip` is lightweight (6.1 kB minified, 2.5 kB gzipped), dependency-free, and 40 times faster than the old JSZip.
 
 * [Quick Start](#Quick-Start)
 * [Compatibility](#Compatibility)
@@ -152,8 +152,8 @@ Now, comparing bundle size is clearly unfair because the others do a bunch of th
 
 |                    | `client-zip`@2.4.2 | fflate@0.7.4 | zip.js@2.7.6 | conflux@4.0.3 | JSZip@3.10.1  |
 |--------------------|-------------------:|-------------:|--------------:|--------------:|--------------:|
-| minified           |             5.7 kB |      29.8 kB |      162.3 kB |      198.8 kB |       94.9 kB |
-| minified + gzipped |             2.2 kB |        11 kB |       57.8 kB |       56.6 kB |       27.6 kB |
+| minified           |             6.1 kB |      29.8 kB |      162.3 kB |      198.8 kB |       94.9 kB |
+| minified + gzipped |             2.5 kB |        11 kB |       57.8 kB |       56.6 kB |       27.6 kB |
 
 The datasets I used in the new tests are not public domain, but nothing sensitive either ; I can send them if you ask.
 
