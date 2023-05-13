@@ -53,9 +53,9 @@ async function downloadTestZip() {
 
 client-zip works in all modern browsers (and Deno) out of the box. If you bundle it with your app and try to transpile it down to lower than ES2020, it will break because it needs BigInts. [Version 1.x](https://www.npmjs.com/package/client-zip/v/nozip64) may be painfully transpiled down to as low as ES2015.
 
-The default release of version 2 targets ES2020 and is a bare ES6 module + an IIFE version suitable for a ServiceWorker's `importScript`. Version 1 releases were built for ES2018.
+The default release of version 2 targets ES2020 and is a bare ES module + an IIFE version suitable for a ServiceWorker's `importScript`. Version 1 releases were built for ES2018.
 
-When necessary, client-zip will generate Zip64 archives. Those are not readable by every ZIP reader out there, especially with the streaming flag.
+When necessary, client-zip version 2 will generate Zip64 archives. It will always specify "ZIP version 4.5 required to unzip", even when that's not really true. The resulting files are not readable by every ZIP reader out there.
 
 # Usage
 
@@ -159,6 +159,7 @@ The datasets I used in the new tests are not public domain, but nothing sensitiv
 
 # Known Issues
 
+* MS Office documents must be stored using ZIP version 2.0 ; [use client-zip^1 to generate those](https://github.com/Touffy/client-zip/issues/59), you don't need client-zip^2 features for Office documents anyway.
 * client-zip cannot be bundled by SSR frameworks that expect it to run in Node.js too ([workaround](https://github.com/Touffy/client-zip/issues/28#issuecomment-1018033984)).
 * Firefox may kill a Service Worker that is still feeding a download ([workaround](https://github.com/Touffy/client-zip/issues/46#issuecomment-1259223708)).
 * Safari could not download from a Service Worker until version 15.4 (released 4 march 2022).
