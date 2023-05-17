@@ -1,5 +1,5 @@
 import "./polyfills.ts"
-import { BufferLike, StreamLike, normalizeInput, ReadableFromIter } from "./input.ts"
+import { BufferLike, StreamLike, normalizeInput, ReadableFromIterator } from "./input.ts"
 import { normalizeMetadata } from "./metadata.ts"
 import { loadFiles, contentLength } from "./zip.ts"
 
@@ -45,12 +45,20 @@ function* mapMeta(files: Iterable<InputWithMeta | InputWithSizeMeta | JustMeta>)
   for (const file of files) yield normalizeMetadata(...normalizeArgs(file)[0])
 }
 
-async function* mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta>) {
-  for await (const file of files) {
-    const [metaArgs, dataArgs] = normalizeArgs(file)
-    // @ts-ignore type inference isn't good enough for this… yet…
-    // but rewriting the code to be more explicit would make it longer
-    yield Object.assign(normalizeInput(...dataArgs), normalizeMetadata(...metaArgs))
+function mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta>) {
+  // @ts-ignore TypeScript really needs to catch up
+  const iterator = files[Symbol.iterator in files ? Symbol.iterator : Symbol.asyncIterator]()
+  return {
+    async next() {
+      const res = await iterator.next()
+      if (res.done) return res
+      const [metaArgs, dataArgs] = normalizeArgs(res.value)
+      // @ts-ignore type inference isn't good enough for this… yet…
+      // but rewriting the code to be more explicit would make it longer
+      return { done: false, value: Object.assign(normalizeInput(...dataArgs), normalizeMetadata(...metaArgs)) }
+    },
+    throw: iterator.throw?.bind(iterator),
+    [Symbol.asyncIterator]() { return this }
   }
 }
 
@@ -62,5 +70,6 @@ export function downloadZip(files: ForAwaitable<InputWithMeta | InputWithSizeMet
   const headers: Record<string, any> = { "Content-Type": "application/zip", "Content-Disposition": "attachment" }
   if (Number.isInteger(options.length) && options.length! > 0) headers["Content-Length"] = options.length
   if (options.metadata) headers["Content-Length"] = predictLength(options.metadata)
-  return new Response(ReadableFromIter(loadFiles(mapFiles(files), options)), { headers })
+  const mapped = mapFiles(files)
+  return new Response(ReadableFromIterator(loadFiles(mapped, options), mapped), { headers })
 }

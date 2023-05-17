@@ -31,17 +31,16 @@ export type ZipFileDescription = {
   if (input instanceof Blob) return { modDate, bytes: input.stream() }
   if (input instanceof Uint8Array || input instanceof ReadableStream) return { modDate, bytes: input }
   if (input instanceof ArrayBuffer || ArrayBuffer.isView(input)) return { modDate, bytes: makeUint8Array(input) }
-  if (Symbol.asyncIterator in input) return { modDate, bytes: ReadableFromIter(input) }
+  if (Symbol.asyncIterator in input) return { modDate, bytes: ReadableFromIterator(input[Symbol.asyncIterator]()) }
   throw new TypeError("Unsupported input format.")
 }
 
-export function ReadableFromIter<T extends BufferLike>(iter: AsyncIterable<T> | AsyncIterator<T>) {
-  const gen = ("next" in iter) ? iter : iter[Symbol.asyncIterator]()
+export function ReadableFromIterator<T extends BufferLike>(iter: AsyncIterator<T>, upstream: AsyncIterator<any> = iter) {
   return new ReadableStream<Uint8Array>({
     async pull(controller) {
       let pushedSize = 0
       while (controller.desiredSize! > pushedSize) {
-        const next = await gen.next()
+        const next = await iter.next()
         if (next.value) {
           const chunk = normalizeChunk(next.value)
           controller.enqueue(chunk)
@@ -53,9 +52,8 @@ export function ReadableFromIter<T extends BufferLike>(iter: AsyncIterable<T> | 
         }
       }
     },
-    async cancel(err) {
-      try { await gen.throw?.(err) }
-      catch(_) {}
+    cancel(err) {
+      upstream.throw?.(err)
     }
   })
 }
