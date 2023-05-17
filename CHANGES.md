@@ -1,3 +1,7 @@
+## 1.6.3:
+
+* bugfix: cancelling the output stream will cause an error in the source iterator FOR REAL NOW
+
 ## 1.6.2:
 
 * new: filenames can be flagged as UTF-8 using the EFS bit in the file header flags

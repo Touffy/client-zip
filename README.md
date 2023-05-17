@@ -7,7 +7,7 @@
 
 `client-zip` concatenates multiple files (e.g. from multiple HTTP requests) into a single ZIP, **in the browser**, so you can let your users download all the files in one click. It does *not* compress the files or unzip existing archives.
 
-`client-zip` is lightweight (4.6 kB minified, 2.1 kB gzipped), dependency-free, and 40 times faster than the old JSZip.
+`client-zip` is lightweight (4.8 kB minified, 2.1 kB gzipped), dependency-free, and 40 times faster than the old JSZip.
 
 * [Quick Start](#Quick-Start)
 * [Compatibility](#Compatibility)
@@ -142,9 +142,9 @@ In a different experiment using Deno to avoid storing very large output files, m
 
 Now, comparing bundle size is clearly unfair because the others do a bunch of things that my library doesn't. Here you go anyway (sizes are shown in decimal kilobytes):
 
-|                    | `client-zip`@1.6.2 | fflate@0.7.4 | zip.js@2.7.6 | conflux@4.0.3 | JSZip@3.10.1  |
+|                    | `client-zip`@1.6.3 | fflate@0.7.4 | zip.js@2.7.6 | conflux@4.0.3 | JSZip@3.10.1  |
 |--------------------|-------------------:|-------------:|--------------:|--------------:|--------------:|
-| minified           |             4.6 kB |      29.8 kB |      162.3 kB |      198.8 kB |       94.9 kB |
+| minified           |             4.8 kB |      29.8 kB |      162.3 kB |      198.8 kB |       94.9 kB |
 | minified + gzipped |             2.1 kB |        11 kB |       57.8 kB |       56.6 kB |       27.6 kB |
 
 The datasets I used in the new tests are not public domain, but nothing sensitive either ; I can send them if you ask.
