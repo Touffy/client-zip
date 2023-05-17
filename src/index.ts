@@ -1,5 +1,5 @@
 import "./polyfills.ts"
-import { BufferLike, StreamLike, normalizeInput, ReadableFromIter } from "./input.ts"
+import { BufferLike, StreamLike, normalizeInput, ReadableFromIterator } from "./input.ts"
 import { normalizeMetadata } from "./metadata.ts"
 import { loadFiles, contentLength, ForAwaitable } from "./zip.ts"
 
@@ -46,12 +46,20 @@ function* mapMeta(files: Iterable<InputWithMeta | InputWithSizeMeta | JustMeta |
   for (const file of files) yield normalizeMetadata(...normalizeArgs(file)[0])
 }
 
-async function* mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>) {
-  for await (const file of files) {
-    const [metaArgs, dataArgs] = normalizeArgs(file)
-    // @ts-ignore type inference isn't good enough for this… yet…
-    // but rewriting the code to be more explicit would make it longer
-    yield Object.assign(normalizeInput(...dataArgs), normalizeMetadata(...metaArgs))
+function mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>) {
+  // @ts-ignore TypeScript really needs to catch up
+  const iterator = files[Symbol.iterator in files ? Symbol.iterator : Symbol.asyncIterator]()
+  return {
+    async next() {
+      const res = await iterator.next()
+      if (res.done) return res
+      const [metaArgs, dataArgs] = normalizeArgs(res.value)
+      // @ts-ignore type inference isn't good enough for this… yet…
+      // but rewriting the code to be more explicit would make it longer
+      return { done: false, value: Object.assign(normalizeInput(...dataArgs), normalizeMetadata(...metaArgs)) }
+    },
+    throw: iterator.throw?.bind(iterator),
+    [Symbol.asyncIterator]() { return this }
   }
 }
 
@@ -67,5 +75,6 @@ export function downloadZip(files: ForAwaitable<InputWithMeta | InputWithSizeMet
 }
 
 export function makeZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, options: Options = {}) {
-  return ReadableFromIter(loadFiles(mapFiles(files), options));
+  const mapped = mapFiles(files)
+  return ReadableFromIterator(loadFiles(mapped, options), mapped);
 }
