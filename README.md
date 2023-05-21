@@ -125,9 +125,9 @@ I started this project because I wasn't impressed with what — at the time — 
 
 I requested Blob outputs from each lib, without compression. I measured the time until the blob was ready, on my M1 Pro. Sounds fair?
 
-**Experiemnt 1** consists of 4 files (total 539 MB) manually added to a file input from my local filesystem, so there is no latency and the ZIP format structural overhead is insignificant.
+**Experiment 1** consists of 4 files (total 539 MB) manually added to a file input from my local filesystem, so there is no latency and the ZIP format structural overhead is insignificant.
 
-**Experiemnt 2** is a set of 6214 small TGA files (total 119 MB). I tried to load them with a file input as before, but my browsers kept throwing errors while processing the large array of Files. So I had to switch to a different method, where the files are served over HTTP locally by nginx and *fetched* lazily. Unfortunately, that causes some atrocious latency across the board.
+**Experiment 2** is a set of 6214 small TGA files (total 119 MB). I tried to load them with a file input as before, but my browsers kept throwing errors while processing the large array of Files. So I had to switch to a different method, where the files are served over HTTP locally by nginx and *fetched* lazily. Unfortunately, that causes some atrocious latency across the board.
 
 |                   |        | `client-zip`@2.4.0 |  fflate@0.7.4  |  zip.js@2.7.6  |  conflux@4.0.3  |  JSZip@3.10.1   |
 |:------------------|--------|-------------------:|---------------:|---------------:|----------------:|----------------:|
