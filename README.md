@@ -121,6 +121,8 @@ By default (when `buffersAreUTF8` is not set or `undefined`), each ArrayBuffer f
 
 *updated in may 2023*
 
+*updated again in may 2023 (experiment 3)*
+
 I started this project because I wasn't impressed with what — at the time — appeared to be the only other ZIP library for browsers, [JSZip](https://stuk.github.io/jszip/). I later found other libraries, which I've included in the new benchmarks, and JSZip has improved dramatically (version 3.6 was 40 times slower vs. currently only 40% slower).
 
 I requested Blob outputs from each lib, without compression. I measured the time until the blob was ready, on my M1 Pro. Sounds fair?
@@ -129,38 +131,42 @@ I requested Blob outputs from each lib, without compression. I measured the time
 
 **Experiemnt 2** is a set of 6214 small TGA files (total 119 MB). I tried to load them with a file input as before, but my browsers kept throwing errors while processing the large array of Files. So I had to switch to a different method, where the files are served over HTTP locally by nginx and *fetched* lazily. Unfortunately, that causes some atrocious latency across the board.
 
-|                   |        | `client-zip`@2.4.0 |  fflate@0.7.4  |  zip.js@2.7.6  |  conflux@4.0.3  |  JSZip@3.10.1   |
-|:------------------|--------|-------------------:|---------------:|---------------:|----------------:|----------------:|
-|  **experiment 1** | Safari |     1.647 (σ=21) s | 1.792 (σ=15) s | 1.912 (σ=80) s |  1.820 (σ=16) s |  2.122 (σ=60) s |
-| baseline: 1.653 s | Chrome |     2.480 (σ=41) s |  1.601 (σ=4) s | 4.251 (σ=53) s |  4.268 (σ=44) s |  3.921 (σ=15) s |
-|  **experiment 2** | Safari |     2.173 (σ=11) s | 2.157 (σ=23) s | 3.158 (σ=17) s |  1.794 (σ=13) s |  2.631 (σ=27) s |
-| baseline: 0.615 s | Chrome |     3.567 (σ=77) s |  3.506 (σ=9) s | 5.689 (σ=17) s |  3.174 (σ=22) s |  4.602 (σ=50) s |
+**Experiemnt 3** is the same set of 6214 TGA files combined with very small PNG files for a total of 12 044 files (total 130 MB). This time, the files are *fetched* by a [DownloadStream](https://github.com/Touffy/dl-stream) to minimize latency.
 
-The experiments were run 10 times (not counting a first run to let the JavaScript engine "warm up") for each lib and each dataset, *with the dev tools closed* (this is important, opening the dev tools has a noticeable impact on CPU and severe impact on HTTP latency). The numbers in the table are the mean time of the ten runs, with the standard deviation in parentheses.
+|                   |        | `client-zip`@2.4.3 |  fflate@0.7.4  |  zip.js@2.7.14  |  conflux@4.0.3  |  JSZip@3.10.1   |
+|:------------------|--------|-------------------:|---------------:|----------------:|----------------:|----------------:|
+|  **experiment 1** | Safari |     1.647 (σ=21) s | 1.792 (σ=15) s |  1.912 (σ=80) s |  1.820 (σ=16) s |  2.122 (σ=60) s |
+| baseline: 1.653 s | Chrome |     2.480 (σ=41) s |  1.601 (σ=4) s |  4.251 (σ=53) s |  4.268 (σ=44) s |  3.921 (σ=15) s |
+|  **experiment 2** | Safari |     2.173 (σ=11) s | 2.157 (σ=23) s |  3.158 (σ=17) s |  1.794 (σ=13) s |  2.631 (σ=27) s |
+| baseline: 0.615 s | Chrome |     3.567 (σ=77) s |  3.506 (σ=9) s |  5.689 (σ=17) s |  3.174 (σ=22) s |  4.602 (σ=50) s |
+|  **experiment 3** | Safari |     1.768 (σ=12) s | 1.691 (σ=19) s |  3.149 (σ=45) s |  1.511 (σ=38) s |  2.703 (σ=79) s |
+| baseline: 0.892 s | Chrome |     4.604 (σ=79) s | 3.972 (σ=85) s | 7.507 (σ=261) s |  3.812 (σ=80) s |  6.297 (σ=35) s |
 
-For the baseline, I timed the `zip` process in my UNIX shell. As advertised, fflate run just as fast — in Chrome, anyway, and when there is no overhead for HTTP (experiment 1). In the same test, client-zip beats everyone else in Safari.
+The experiments were run 10 times (not counting a first run to let the JavaScript engine "warm up" and ensure the browser caches everything) for each lib and each dataset, *with the dev tools closed* (this is important, opening the dev tools has a noticeable impact on CPU and severe impact on HTTP latency). The numbers in the table are the mean time of the ten runs, with the standard deviation in parentheses.
 
-Conflux does particularly well with the second experiment because it is fed by a stream of inputs, whose buffer decreases the effect of latency. That is not an intrisic advantage of Conflux but I let it keep the win because it is the only library that recommends this in its README, and it illustrates how buffering several Responses ahead of time can improve performance when dealing with many small requests.
+For the baseline, I timed the `zip -0` process in my UNIX shell. As advertised, fflate run just as fast — in Chrome, anyway, and when there is no overhead for HTTP (experiment 1). In the same test, client-zip beats everyone else in Safari.
+
+Conflux does particularly well in the second and third experiments thanks to its internal use of ReadableStreams, which seem to run faster than async generators.
 
 Zip.js workers were disabled because I didn't want to bother fixing the error I got from the library. Using workers on this task could only help by sacrificing lots of memory, anyway. But I suppose Zip.js really needs those workers to offset its disgraceful single-threaded performance.
 
-It's interesting that Chrome performs so much worse than Safari with client-zip and conflux, the two libraries that rely on WHATWG Streams and (in my case) async iterables, whereas it shows better (and extremely consistent) runtimes with fflate, which uses synchronous code with callbacks. Zip.js and JSZip used to be faster in Chrome than Safari, but clearly things have changed.
+It's interesting that Chrome performs so much worse than Safari with client-zip and conflux, the two libraries that rely on WHATWG Streams and (in my case) async iterables, whereas it shows better (and extremely consistent) runtimes with fflate, which uses synchronous code with callbacks, in experiment 1. Zip.js and JSZip used to be faster in Chrome than Safari, but clearly things have changed. Experiments 2 and 3 are really taxing for Chrome.
 
 In a different experiment using Deno to avoid storing very large output files, memory usage for any amount of data remained constant or close enough. My tests maxed out at 36.1 MB of RAM while processing nearly 6 GB.
 
 Now, comparing bundle size is clearly unfair because the others do a bunch of things that my library doesn't. Here you go anyway (sizes are shown in decimal kilobytes):
 
-|                    | `client-zip`@2.4.3 | fflate@0.7.4 | zip.js@2.7.6 | conflux@4.0.3 | JSZip@3.10.1  |
+|                    | `client-zip`@2.4.3 | fflate@0.7.4 | zip.js@2.7.14 | conflux@4.0.3 | JSZip@3.10.1  |
 |--------------------|-------------------:|-------------:|--------------:|--------------:|--------------:|
-| minified           |             6.3 kB |      29.8 kB |      162.3 kB |      198.8 kB |       94.9 kB |
-| minified + gzipped |             2.6 kB |        11 kB |       57.8 kB |       56.6 kB |       27.6 kB |
+| minified           |             6.3 kB |      29.8 kB |      163.2 kB |      198.8 kB |       94.9 kB |
+| minified + gzipped |             2.6 kB |        11 kB |         58 kB |       56.6 kB |       27.6 kB |
 
 The datasets I used in the new tests are not public domain, but nothing sensitive either ; I can send them if you ask.
 
 # Known Issues
 
 * MS Office documents must be stored using ZIP version 2.0 ; [use client-zip^1 to generate those](https://github.com/Touffy/client-zip/issues/59), you don't need client-zip^2 features for Office documents anyway.
-* client-zip cannot be bundled by SSR frameworks that expect it to run in Node.js too ([workaround](https://github.com/Touffy/client-zip/issues/28#issuecomment-1018033984)).
+* client-zip cannot be bundled by SSR frameworks that expect it to run server-side too ([workaround](https://github.com/Touffy/client-zip/issues/28#issuecomment-1018033984)).
 * Firefox may kill a Service Worker that is still feeding a download ([workaround](https://github.com/Touffy/client-zip/issues/46#issuecomment-1259223708)).
 * Safari could not download from a Service Worker until version 15.4 (released 4 march 2022).
 

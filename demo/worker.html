@@ -9,7 +9,6 @@ body { min-height: 100%; display: flex; flex-direction: column; align-items: cen
 p, form { width: 80vw; margin-top: 0; }
 h1 { text-align: center; font-size: 1.3rem; margin-bottom: 2rem; }
 h2 { font-size: 1rem; }
-.warn { background-color: rgb(247, 214, 202); padding: 1em; }
 button, input { font-size: inherit; }
 label { display: inline-flex; width: calc(100% - 3em); align-items: start; height: 1.5em; }
 input { color: blue; border: 0 none; padding: 0; margin: 0; border-bottom: 1px solid blue; flex-grow: 1; }
@@ -32,17 +31,11 @@ form:invalid button[type=submit] { background-color: #dbdbdb; color: gray; }
     and clone the URL input). You could also use <em>hidden</em> fields to specify some extra URLs or headers,
     even specify all the URLs that way to make a non-interactive form with only a submit button visible.
   </p>
-  <p>The ServiceWorker (just 30 lines) intercepts the request, lazily fetches the URLs found in the form data
-    (all the fields named "url") with a generator, feeds that to <code>downloadZip</code> and responds
-    with <code>downloadZip</code>'s return value (which is a Response). That's it.
+  <p>The ServiceWorker (just 14 lines) intercepts the request, lazily fetches the URLs found in the form data
+    (all the fields named "url") with a <a href="https://github.com/Touffy/dl-stream">DownloadStream</a>,
+    feeds that to <code>downloadZip</code> and responds with <code>downloadZip</code>'s return value (which is a Response).
+    That's it.
     The process is only a bit more complicated that using a Blob (<a href="worker.js">look at the code</a>).
-  </p>
-  <p class="warn">Until <a href="https://webkit.org/blog/12176/release-notes-for-safari-technology-preview-138/">Safari Technology Preview 138</a>,
-    <a href="https://bugs.webkit.org/show_bug.cgi?id=202142">an old bug in Safari</a>
-    bypassed the ServiceWorker as soon as the browser detected that it should download the content,
-    whether through a form or a download link.
-    It's hard to detect this bug with JavaScript (<i>fetch</i>ing the zip works as expected), so you'll
-    need to do browser detection 🤦‍♂️ and fall back to the less efficient Blob method when it's Safari.
   </p>
 
   <form name="download" action="downloadZip/demo.zip" method="POST">
