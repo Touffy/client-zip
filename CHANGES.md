@@ -1,3 +1,7 @@
+## 2.4.4:
+
+* *options* argument was missing in `makeZip` type declaration
+
 ## 2.4.3:
 
 * bugfix: cancelling the output stream will cause an error in the source iterator FOR REAL NOW
