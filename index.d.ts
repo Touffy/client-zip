@@ -40,4 +40,4 @@ export declare function predictLength(files: Iterable<InputWithMeta | InputWithS
 
 export declare function downloadZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, options?: Options): Response
 
-export declare function makeZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>): ReadableStream<Uint8Array>
+export declare function makeZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, options?: Options): ReadableStream<Uint8Array>
