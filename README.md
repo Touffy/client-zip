@@ -191,11 +191,11 @@ Done.
 
 ### compression
 
-Limited use case. If the user is going to extract the archive just after downloading anyway, it's a waste of CPU. Implementation should be relatively easy with the new CompressionStream API.
+Limited use case. If the user is going to extract the archive just after downloading anyway, it's a waste of CPU. Implementation should be relatively easy with the new CompressionStream API. Incompatible with content-length prediction.
 
 ### encryption
 
-AES and RSA encryption could be implemented quite easily with [WebCrypto](https://www.w3.org/TR/WebCryptoAPI/). I just don't see any use case for it (but if there is one, compression would be relevant for it too).
+AES and RSA encryption could have been implemented with [WebCrypto](https://www.w3.org/TR/WebCryptoAPI/). However, only the proprietary PKWARE utility supports strong encryption of file contents **and metadata**. Well-supported Zip encryption methods (even using AES) do not hide metadata, giving you questionable privacy. Therefore, **this feature is no longer planned for client-zip**.
 
 ### performance improvements
 
