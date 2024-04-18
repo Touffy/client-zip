@@ -58,7 +58,7 @@ export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metad
   for await (const file of files) {
     const flags = flagNameUTF8(file, options.buffersAreUTF8)
     yield fileHeader(file, flags)
-    yield file.encodedName
+    yield new Uint8Array(file.encodedName)
     if (file.isFile) {
       yield* fileData(file)
     }
