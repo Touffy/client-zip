@@ -1,3 +1,7 @@
+## 2.4.5:
+
+* bugfix: the output stream can now be transferred without breaking the central repository.
+
 ## 2.4.4:
 
 * *options* argument was missing in `makeZip` type declaration
