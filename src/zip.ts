@@ -42,7 +42,7 @@ export async function* loadFiles(files: AsyncIterable<ZipFileDescription & Metad
   for await (const file of files) {
     const flags = flagNameUTF8(file, options.buffersAreUTF8)
     yield fileHeader(file, flags)
-    yield file.encodedName
+    yield new Uint8Array(file.encodedName)
     yield* fileData(file)
     yield dataDescriptor(file)
 
