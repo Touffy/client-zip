@@ -1,3 +1,7 @@
+## 1.6.4:
+
+* bugfix: the output stream can now be transferred without breaking the central repository.
+
 ## 1.6.3:
 
 * bugfix: cancelling the output stream will cause an error in the source iterator FOR REAL NOW
