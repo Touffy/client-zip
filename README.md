@@ -99,7 +99,7 @@ Starting with version 1.5, if you are able to gather all the relevant metadata (
 
 If you already have Files (e.g. in a form input), it's alright to pass them as metadata too. However, if you would normally `fetch` each file from a server, or generate them dynamically, please try using a dedicated metadata endpoint or function, and transforming its response into an array of `{name, size}` objects, rather than doing all the requests or computations in advance just to get a Content-Length.
 
-An object with a *name* but no *input* and no *size* (not even zero) will be interpreted as an empty folder and renamed accordingly. To properly specify emtpy files without an *input*, set the *size* explicitly to zero (`0` or `0n`).
+An object with a *name* but no *input* and no *size* (not even zero) will be interpreted as an empty folder and renamed accordingly. To properly specify empty files without an *input*, set the *size* explicitly to zero (`0` or `0n`).
 
 This iterable of metadata can be passed as the `metadata` property of `downloadZip`'s *options*, or, if you want to display the predicted size without actually creating the Zip file, to the `predictLength` function (not exposed in the worker script). Naturally, the metadata and actual data must match, and be **provided in the same order!** Otherwise, there could be inaccuracies in Zip64 lengths.
 
@@ -127,11 +127,11 @@ I started this project because I wasn't impressed with what — at the time — 
 
 I requested Blob outputs from each lib, without compression. I measured the time until the blob was ready, on my M1 Pro. Sounds fair?
 
-**Experiemnt 1** consists of 4 files (total 539 MB) manually added to a file input from my local filesystem, so there is no latency and the ZIP format structural overhead is insignificant.
+**Experiment 1** consists of 4 files (total 539 MB) manually added to a file input from my local filesystem, so there is no latency and the ZIP format structural overhead is insignificant.
 
-**Experiemnt 2** is a set of 6214 small TGA files (total 119 MB). I tried to load them with a file input as before, but my browsers kept throwing errors while processing the large array of Files. So I had to switch to a different method, where the files are served over HTTP locally by nginx and *fetched* lazily. Unfortunately, that causes some atrocious latency across the board.
+**Experiment 2** is a set of 6214 small TGA files (total 119 MB). I tried to load them with a file input as before, but my browsers kept throwing errors while processing the large array of Files. So I had to switch to a different method, where the files are served over HTTP locally by nginx and *fetched* lazily. Unfortunately, that causes some atrocious latency across the board.
 
-**Experiemnt 3** is the same set of 6214 TGA files combined with very small PNG files for a total of 12 044 files (total 130 MB). This time, the files are *fetched* by a [DownloadStream](https://github.com/Touffy/dl-stream) to minimize latency.
+**Experiment 3** is the same set of 6214 TGA files combined with very small PNG files for a total of 12 044 files (total 130 MB). This time, the files are *fetched* by a [DownloadStream](https://github.com/Touffy/dl-stream) to minimize latency.
 
 |                   |        | `client-zip`@2.4.3 |  fflate@0.7.4  |  zip.js@2.7.14  |  conflux@4.0.3  |  JSZip@3.10.1   |
 |:------------------|--------|-------------------:|---------------:|----------------:|----------------:|----------------:|
@@ -142,7 +142,7 @@ I requested Blob outputs from each lib, without compression. I measured the time
 |  **experiment 3** | Safari |     1.768 (σ=12) s | 1.691 (σ=19) s |  3.149 (σ=45) s |  1.511 (σ=38) s |  2.703 (σ=79) s |
 | baseline: 0.892 s | Chrome |     4.604 (σ=79) s | 3.972 (σ=85) s | 7.507 (σ=261) s |  3.812 (σ=80) s |  6.297 (σ=35) s |
 
-The experiments were run 10 times (not counting a first run to let the JavaScript engine "warm up" and ensure the browser caches everything) for each lib and each dataset, *with the dev tools closed* (this is important, opening the dev tools has a noticeable impact on CPU and severe impact on HTTP latency). The numbers in the table are the mean time of the ten runs, with the standard deviation in parentheses.
+The experiments were run 10 times (not counting a first run to let the JavaScript engine "warm up" and ensure the browser caches everything) for each lib and each dataset, *with the dev tools closed* (this is important, opening the dev tools has a noticeable impact on CPU and severe impact on HTTP latency). The numbers in the table are the meantime of the ten runs, with the standard deviation in parentheses.
 
 For the baseline, I timed the `zip -0` process in my UNIX shell. As advertised, fflate run just as fast — in Chrome, anyway, and when there is no overhead for HTTP (experiment 1). In the same test, client-zip beats everyone else in Safari.
 
@@ -172,7 +172,7 @@ The datasets I used in the new tests are not public domain, but nothing sensitiv
 
 # Roadmap
 
-`client-zip` does not support compression, encryption, or any extra fields and attributes. It already meets the need that sparked its creation: combining many `fetch` responses into a one-click donwload for the end user.
+`client-zip` does not support compression, encryption, or any extra fields and attributes. It already meets the need that sparked its creation: combining many `fetch` responses into a one-click download for the end user.
 
 **New in version 2**: it now generates Zip64 archives, which increases the limit on file size to 4 Exabytes (because of JavaScript numbers) and total size to 18 Zettabytes.
 **New in version 2.2**: archive size can be predicted and used as the response's Content-Length.
@@ -215,4 +215,4 @@ When the folder has contents, just include the folder hierarchy in its content's
 
 Any input object that has no size and no input will be treated as a folder, and a trailing slash will be added to its filename when necessary. Conversely, any input object that has a size or input (even an empty string) will be treated as a file, and the trailing slash will be removed if present.
 
-Usage of `predictLength` or the `metadata` option must be consistent with the actual input. For exampe, if `{ name: "file" }` is passed as metadata, client-zip will think it's an empty folder named "file/". If you then pass `{ input: "", name: "file" }` in the same order to `downloadZip`, it will store the contents as an empty file with no trailing slash ; therefore, the predicted length will be off by at least one.
+Usage of `predictLength` or the `metadata` option must be consistent with the actual input. For example, if `{ name: "file" }` is passed as metadata, client-zip will think it's an empty folder named "file/". If you then pass `{ input: "", name: "file" }` in the same order to `downloadZip`, it will store the contents as an empty file with no trailing slash ; therefore, the predicted length will be off by at least one.
