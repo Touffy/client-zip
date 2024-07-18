@@ -21,7 +21,7 @@ async function test() {
   // an ArrayBuffer
   const hi = new TextEncoder().encode("hello world!")
   // an HTTP Response
-  const code = fetch("https://raw.githubusercontent.com/Touffy/client-zip/master/src/index.ts")
+  const code = await fetch("https://raw.githubusercontent.com/Touffy/client-zip/master/src/index.ts")
   // just a string
   const bye = "goodbye."
 
