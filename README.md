@@ -119,11 +119,11 @@ I started this project because I wasn't impressed with what — at the time — 
 
 I requested Blob outputs from each lib, without compression. I measured the time until the blob was ready, on my M1 Pro. Sounds fair?
 
-**Experiemnt 1** consists of 4 files (total 539 MB) manually added to a file input from my local filesystem, so there is no latency and the ZIP format structural overhead is insignificant.
+**Experiment 1** consists of 4 files (total 539 MB) manually added to a file input from my local filesystem, so there is no latency and the ZIP format structural overhead is insignificant.
 
-**Experiemnt 2** is a set of 6214 small TGA files (total 119 MB). I tried to load them with a file input as before, but my browsers kept throwing errors while processing the large array of Files. So I had to switch to a different method, where the files are served over HTTP locally by nginx and *fetched* lazily. Unfortunately, that causes some atrocious latency across the board.
+**Experiment 2** is a set of 6214 small TGA files (total 119 MB). I tried to load them with a file input as before, but my browsers kept throwing errors while processing the large array of Files. So I had to switch to a different method, where the files are served over HTTP locally by nginx and *fetched* lazily. Unfortunately, that causes some atrocious latency across the board.
 
-**Experiemnt 3** is the same set of 6214 TGA files combined with very small PNG files for a total of 12 044 files (total 130 MB). This time, the files are *fetched* by a [DownloadStream](https://github.com/Touffy/dl-stream) to minimize latency.
+**Experiment 3** is the same set of 6214 TGA files combined with very small PNG files for a total of 12 044 files (total 130 MB). This time, the files are *fetched* by a [DownloadStream](https://github.com/Touffy/dl-stream) to minimize latency.
 
 |                   |        | `client-zip`@2.4.3 |  fflate@0.7.4  |  zip.js@2.7.14  |  conflux@4.0.3  |  JSZip@3.10.1   |
 |:------------------|--------|-------------------:|---------------:|----------------:|----------------:|----------------:|
@@ -163,7 +163,7 @@ The datasets I used in the new tests are not public domain, but nothing sensitiv
 
 # Roadmap
 
-`client-zip` does not support compression, encryption, or any extra fields and attributes, and does not produce ZIP64 files. It already meets the need that sparked its creation: combining many `fetch` responses into a one-click donwload for the end user (within a total 4GB limit), so I'm calling it a 1.0 anyway.
+`client-zip` does not support compression, encryption, or any extra fields and attributes, and does not produce ZIP64 files. It already meets the need that sparked its creation: combining many `fetch` responses into a one-click download for the end user (within a total 4GB limit), so I'm calling it a 1.0 anyway.
 
 If you need a feature, you're very welcome to [open an issue](https://github.com/Touffy/client-zip/issues) or submit a pull request.
 
