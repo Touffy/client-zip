@@ -142,7 +142,7 @@ I requested Blob outputs from each lib, without compression. I measured the time
 |  **experiment 3** | Safari |     1.768 (σ=12) s | 1.691 (σ=19) s |  3.149 (σ=45) s |  1.511 (σ=38) s |  2.703 (σ=79) s |
 | baseline: 0.892 s | Chrome |     4.604 (σ=79) s | 3.972 (σ=85) s | 7.507 (σ=261) s |  3.812 (σ=80) s |  6.297 (σ=35) s |
 
-The experiments were run 10 times (not counting a first run to let the JavaScript engine "warm up" and ensure the browser caches everything) for each lib and each dataset, *with the dev tools closed* (this is important, opening the dev tools has a noticeable impact on CPU and severe impact on HTTP latency). The numbers in the table are the meantime of the ten runs, with the standard deviation in parentheses.
+The experiments were run 10 times (not counting a first run to let the JavaScript engine "warm up" and ensure the browser caches everything) for each lib and each dataset, *with the dev tools closed* (this is important, opening the dev tools has a noticeable impact on CPU and severe impact on HTTP latency). The numbers in the table are the mean time of the ten runs, with the standard deviation in parentheses.
 
 For the baseline, I timed the `zip -0` process in my UNIX shell. As advertised, fflate run just as fast — in Chrome, anyway, and when there is no overhead for HTTP (experiment 1). In the same test, client-zip beats everyone else in Safari.
 
