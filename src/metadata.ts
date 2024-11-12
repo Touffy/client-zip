@@ -21,7 +21,7 @@ export function normalizeMetadata(input?: File | Response | BufferLike | StreamL
   }
   if (input instanceof Response) {
     const contentDisposition = input.headers.get("content-disposition")
-    const filename = contentDisposition && contentDisposition.match(/;\s*filename\*?=["']?(.*?)["']?$/i)
+    const filename = contentDisposition && contentDisposition.match(/filename=['"]?([^'";]+)['"]?(?:;|$)/i)   
     const urlName = filename && filename[1] || input.url && new URL(input.url).pathname.split("/").findLast(Boolean)
     const decoded = urlName && decodeURIComponent(urlName)
     // @ts-ignore allow coercion from null to zero

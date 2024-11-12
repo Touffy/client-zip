@@ -14,7 +14,7 @@ Deno.test("normalizeMetadata needs a filename along Responses with insufficient 
 
 Deno.test("normalizeMetadata guesses filename from Content-Disposition", () => {
   const metadata = normalizeMetadata(new Response("four", {
-    headers: { "content-disposition": "attachment; filename=test.txt" }
+    headers: { "content-disposition": "attachment; filename=test.txt; size=0" }
   }))
   assertEquals(metadata, { uncompressedSize: 0n, encodedName, nameIsBuffer: false })
 })
