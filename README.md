@@ -156,7 +156,7 @@ In a different experiment using Deno to avoid storing very large output files, m
 
 Now, comparing bundle size is clearly unfair because the others do a bunch of things that my library doesn't. Here you go anyway (sizes are shown in decimal kilobytes):
 
-|                    | `client-zip`@2.4.5 | fflate@0.7.4 | zip.js@2.7.14 | conflux@4.0.3 | JSZip@3.10.1  |
+|                    | `client-zip`@2.4.6 | fflate@0.7.4 | zip.js@2.7.14 | conflux@4.0.3 | JSZip@3.10.1  |
 |--------------------|-------------------:|-------------:|--------------:|--------------:|--------------:|
 | minified           |             6.3 kB |      29.8 kB |      163.2 kB |      198.8 kB |       94.9 kB |
 | minified + gzipped |             2.6 kB |        11 kB |         58 kB |       56.6 kB |       27.6 kB |
