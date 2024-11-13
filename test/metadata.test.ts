@@ -14,10 +14,18 @@ Deno.test("normalizeMetadata needs a filename along Responses with insufficient 
 
 Deno.test("normalizeMetadata guesses filename from Content-Disposition", () => {
   const metadata = normalizeMetadata(new Response("four", {
-    headers: { "content-disposition": "attachment; filename=test.txt" }
+    headers: { "content-disposition": "attachment; filename=test.txt; size=0" }
   }))
   assertEquals(metadata, { uncompressedSize: 0n, encodedName, nameIsBuffer: false })
 })
+
+Deno.test("normalizeMetadata guesses filename from non latin Content-Disposition", () => {
+  const metadata = normalizeMetadata(new Response("four", {
+    headers: { "content-disposition": "attachment; filename* = UTF-8''%CF%8C%CE%BD%CE%BF%CE%BC%CE%B1%20%CE%B1%CF%81%CF%87%CE%B5%CE%AF%CE%BF%CF%85.txt" }
+  }))
+  assertEquals(metadata, { uncompressedSize: 0n,encodedName: new TextEncoder().encode("όνομα αρχείου.txt"), nameIsBuffer: false })
+})
+
 
 Deno.test("normalizeMetadata guesses filename from a Response URL", () => {
   const response = Object.create(Response.prototype, {
