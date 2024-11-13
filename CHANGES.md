@@ -1,3 +1,9 @@
+## 1.6.5:
+
+* bugfix: the `filename` attribute in a Content-Disposition header is now parsed correctly
+  - when it is not the last attribute in the header
+  - and when it is the extended `filename*` attribute
+
 ## 1.6.4:
 
 * bugfix: the output stream can now be transferred without breaking the central repository.
