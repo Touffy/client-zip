@@ -12,10 +12,10 @@ const specDate = new Date("2019-04-26T02:00")
 const invalidUTF8 = BufferFromHex("fe")
 
 const baseFile: ZipFileDescription & Metadata = Object.freeze(
-  { isFile: true, bytes: new Uint8Array(zipSpec), encodedName: specName, nameIsBuffer: false, modDate: specDate })
+  { isFile: true, bytes: new Uint8Array(zipSpec), encodedName: specName, nameIsBuffer: false, modDate: specDate, mode: 0o664 })
 
 const baseFolder: ZipFolderDescription & Metadata = Object.freeze(
-  { isFile: false, encodedName: new TextEncoder().encode("folder"), nameIsBuffer: false, modDate: specDate })
+  { isFile: false, encodedName: new TextEncoder().encode("folder"), nameIsBuffer: false, modDate: specDate, mode: 0o775 })
 
 Deno.test("the ZIP fileHeader function makes file headers", () => {
   const file = {...baseFile}

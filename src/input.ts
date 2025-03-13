@@ -6,10 +6,12 @@ export type ZipFileDescription = {
   modDate: Date
   bytes: ReadableStream<Uint8Array> | Uint8Array | Promise<Uint8Array>
   crc?: number // will be computed later
+  mode: number // UNIX permissions, 0o664 by default
   isFile: true
 }
 export type ZipFolderDescription = {
   modDate: Date
+  mode: number // UNIX permissions, 0o775 by default
   isFile: false
 }
 export type ZipEntryDescription = ZipFileDescription | ZipFolderDescription;
@@ -19,30 +21,38 @@ export type ZipEntryDescription = ZipFileDescription | ZipFolderDescription;
  * For other types of input, the `name` is required and `modDate` will default to *now*.
  * @param modDate should be a Date or timestamp or anything else that works in `new Date()`
  */
-export function normalizeInput(input: File | Response | BufferLike | StreamLike, modDate?: any): ZipFileDescription;
-export function normalizeInput(input: undefined, modDate?: any): ZipFolderDescription;
-export function normalizeInput(input?: File | Response | BufferLike | StreamLike, modDate?: any): ZipEntryDescription {
+export function normalizeInput(input: File | Response | BufferLike | StreamLike, modDate?: any, mode?: number): ZipFileDescription;
+export function normalizeInput(input: undefined, modDate?: any, mode?: number): ZipFolderDescription;
+export function normalizeInput(input?: File | Response | BufferLike | StreamLike, modDate?: any, mode?: number): ZipEntryDescription {
   if (modDate !== undefined && !(modDate instanceof Date)) modDate = new Date(modDate)
 
+  const isFile = input !== undefined
+
+  if(!mode) {
+    mode = isFile ? 0o664 : 0o775
+  }
+
   if (input instanceof File) return {
-    isFile: true,
+    isFile,
     modDate: modDate || new Date(input.lastModified),
-    bytes: input.stream()
+    bytes: input.stream(),
+    mode
   }
   if (input instanceof Response) return {
-    isFile: true,
+    isFile,
     modDate: modDate || new Date(input.headers.get("Last-Modified") || Date.now()),
-    bytes: input.body!
+    bytes: input.body!,
+    mode
   }
 
   if (modDate === undefined) modDate = new Date()
   else if (isNaN(modDate)) throw new Error("Invalid modification date.")
-  if (input === undefined) return { isFile: false, modDate }
-  if (typeof input === "string") return { isFile: true, modDate, bytes: encodeString(input) }
-  if (input instanceof Blob) return { isFile: true, modDate, bytes: input.stream() }
-  if (input instanceof Uint8Array || input instanceof ReadableStream) return { isFile: true, modDate, bytes: input }
-  if (input instanceof ArrayBuffer || ArrayBuffer.isView(input)) return { isFile: true, modDate, bytes: makeUint8Array(input) }
-  if (Symbol.asyncIterator in input) return { isFile: true, modDate, bytes: ReadableFromIterator(input[Symbol.asyncIterator]()) }
+  if (!isFile) return { isFile, modDate, mode }
+  if (typeof input === "string") return { isFile, modDate, bytes: encodeString(input), mode }
+  if (input instanceof Blob) return { isFile, modDate, bytes: input.stream(), mode }
+  if (input instanceof Uint8Array || input instanceof ReadableStream) return { isFile, modDate, bytes: input, mode }
+  if (input instanceof ArrayBuffer || ArrayBuffer.isView(input)) return { isFile, modDate, bytes: makeUint8Array(input), mode }
+  if (Symbol.asyncIterator in input) return { isFile, modDate, bytes: ReadableFromIterator(input[Symbol.asyncIterator]()), mode }
   throw new TypeError("Unsupported input format.")
 }
 
