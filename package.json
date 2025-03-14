@@ -1,6 +1,6 @@
 {
   "name": "client-zip",
-  "version": "1.6.5",
+  "version": "1.7.0",
   "description": "A tiny and fast client-side streaming ZIP generator",
   "browser": "index.js",
   "module": "index.js",
@@ -27,7 +27,7 @@
   "author": "David Junger <tffy@free.fr>",
   "license": "MIT",
   "devDependencies": {
-    "esbuild": "^0.17.19",
-    "terser": "~5.14"
+    "esbuild": "^0.25.1",
+    "terser": "~5.39"
   }
 }

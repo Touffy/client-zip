@@ -7,7 +7,7 @@
 
 `client-zip` concatenates multiple files (e.g. from multiple HTTP requests) into a single ZIP, **in the browser**, so you can let your users download all the files in one click. It does *not* compress the files or unzip existing archives.
 
-`client-zip` is lightweight (4.8 kB minified, 2.1 kB gzipped), dependency-free, and 40 times faster than the old JSZip.
+`client-zip` is lightweight (4.9 kB minified, 2.2 kB gzipped), dependency-free, and 40 times faster than the old JSZip.
 
 * [Quick Start](#Quick-Start)
 * [Compatibility](#Compatibility)
@@ -71,6 +71,7 @@ function predictLength(metadata: Iterable<MetadataTypes>): number
   - `name`: the file name ; optional if your input is a File or a Response because they have relevant metadata
   - `lastModified`: last modification date of the file (defaults to `new Date()` unless the input is a File or Response with a valid "Last-Modified" header)
   - `input`: something that contains your data; it can be a `File`, a `Blob`, a `Response`, some kind of `ArrayView` or a raw `ArrayBuffer`, a `ReadableStream<Uint8Array>` (yes, only Uint8Arrays, but most APIs give you just that type anyway), an `AsyncIterable<ArrayBuffer | ArrayView | string>`, … or just a string.
+  - `mode`: override the POSIX file mode (by default, it will be `0o664`). Should be between `0` and `0o777` — disrespect that constraint at your own risk.
 
 The *options* argument currently supports three properties, `length`, `metadata` (see [Content-Length prediction](#content-length-prediction)) and `buffersAreUTF8` (see [Filename encoding](#filename-encoding)).
 
@@ -148,10 +149,10 @@ In a different experiment using Deno to avoid storing very large output files, m
 
 Now, comparing bundle size is clearly unfair because the others do a bunch of things that my library doesn't. Here you go anyway (sizes are shown in decimal kilobytes):
 
-|                    | `client-zip`@1.6.5 | fflate@0.7.4 | zip.js@2.7.14 | conflux@4.0.3 | JSZip@3.10.1  |
+|                    | `client-zip`@1.7.0 | fflate@0.7.4 | zip.js@2.7.14 | conflux@4.0.3 | JSZip@3.10.1  |
 |--------------------|-------------------:|-------------:|--------------:|--------------:|--------------:|
-| minified           |             4.8 kB |      29.8 kB |      163.2 kB |      198.8 kB |       94.9 kB |
-| minified + gzipped |             2.1 kB |        11 kB |         58 kB |       56.6 kB |       27.6 kB |
+| minified           |             4.9 kB |      29.8 kB |      163.2 kB |      198.8 kB |       94.9 kB |
+| minified + gzipped |             2.2 kB |        11 kB |         58 kB |       56.6 kB |       27.6 kB |
 
 The datasets I used in the new tests are not public domain, but nothing sensitive either ; I can send them if you ask.
 
@@ -171,7 +172,7 @@ If you need a feature, you're very welcome to [open an issue](https://github.com
 
 Should be straightforward to implement if needed. Maybe `client-zip` should allow extending by third-party code so those extra fields can be plug-ins instead of built into the library.
 
-<del>The UNIX permissions in external attributes (ignored by many readers, though) are hardcoded to 664, could be made configurable.</del> The UNIX permissions are now configurable via the `mode` field, set by default to 664 for files, 775 for folders.
+<del>Configurable UNIX permissions in external attributes.</del> The UNIX permissions are now configurable (since 1.7.0) via the `mode` field, set by default to 664 for files.
 
 ### ZIP64
 
