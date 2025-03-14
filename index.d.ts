@@ -3,19 +3,19 @@ type StreamLike = ReadableStream<Uint8Array> | AsyncIterable<BufferLike>
 
 /** The file name, modification date and size will be read from the input;
  * extra arguments can be given to override the input’s metadata. */
- type InputWithMeta = File | Response | { input: File | Response, name?: any, lastModified?: any, size?: number | bigint }
+ type InputWithMeta = File | Response | { input: File | Response, name?: any, lastModified?: any, size?: number | bigint, mode?: number }
 
  /** Intrinsic size, but the file name must be provided and modification date can’t be guessed. */
- type InputWithSizeMeta = { input: BufferLike, name: any, lastModified?: any, size?: number | bigint }
+ type InputWithSizeMeta = { input: BufferLike, name: any, lastModified?: any, size?: number | bigint, mode?: number }
  
  /** The file name must be provided ; modification date and content length can’t be guessed. */
- type InputWithoutMeta = { input: StreamLike, name: any, lastModified?: any, size?: number | bigint }
+ type InputWithoutMeta = { input: StreamLike, name: any, lastModified?: any, size?: number | bigint, mode?: number }
  
 /** The folder name must be provided ; modification date can’t be guessed. */
-type InputFolder = { name: any, lastModified?: any, input?: never, size?: never }
+type InputFolder = { name: any, lastModified?: any, input?: never, size?: never, mode?: number }
 
  /** Both filename and size must be provided ; input is not helpful here. */
- type JustMeta = { input?: StreamLike | undefined, name: any, lastModified?: any, size: number | bigint }
+ type JustMeta = { input?: StreamLike | undefined, name: any, lastModified?: any, size: number | bigint, mode?: number }
  
  type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
  

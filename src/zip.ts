@@ -176,7 +176,7 @@ export function centralHeader(file: ZipEntryDescription & Metadata, offset: bigi
   header.setUint16(30, zip64HeaderLength, true)
   // useless disk fields = zero (4 bytes)
   // useless attributes = zero (4 bytes)
-  header.setUint16(40, file.isFile ? 0o100664 : 0o040775, true) // UNIX regular file with permissions 664, or folder with permission 775.
+  header.setUint16(40, file.mode | (file.isFile ? 0o100000 : 0o040000), true)
   header.setUint32(42, clampInt32(offset), true) // offset
   return makeUint8Array(header)
 }
