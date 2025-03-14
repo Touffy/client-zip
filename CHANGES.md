@@ -1,3 +1,7 @@
+## 2.5.0:
+
+* new: `mode` field in input objects can override the default POSIX file mode.
+
 ## 2.4.6:
 
 * bugfix: the `filename` attribute in a Content-Disposition header is now parsed correctly
