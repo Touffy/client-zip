@@ -75,7 +75,7 @@ function predictLength(metadata: Iterable<MetadataTypes>): bigint
   - `name`: the file name ; optional if your input is a File or a Response because they have relevant metadata
   - `lastModified`: last modification date of the file (defaults to `new Date()` unless the input is a File or Response with a valid "Last-Modified" header)
   - `input`: something that contains your data; it can be a `File`, a `Blob`, a `Response`, some kind of `ArrayView` or a raw `ArrayBuffer`, a `ReadableStream<Uint8Array>` (yes, only Uint8Arrays, but most APIs give you just that type anyway), an `AsyncIterable<ArrayBuffer | ArrayView | string>`, … or just a string.
-  - `mode`: override the POSIX file mode (by default, it will be `0o664`). Should be between `0` and `0o777` — disrespect that constraint at your own risk.
+  - `mode`: override the POSIX file mode (by default, it will be `0o664` for files and `0o775` for folders). Should be between `0` and `0o777` — disrespect that constraint at your own risk.
 
 The *options* argument currently supports three properties, `length`, `metadata` (see [Content-Length prediction](#content-length-prediction)) and `buffersAreUTF8` (see [Filename encoding](#filename-encoding)).
 
@@ -185,8 +185,6 @@ If you need a feature, you're very welcome to [open an issue](https://github.com
 Should be straightforward to implement if needed. Maybe `client-zip` should allow extending by third-party code so those extra fields can be plug-ins instead of built into the library.
 
 <del>Configurable UNIX permissions in external attributes.</del> The UNIX permissions are now configurable (since 1.7.0) via the `mode` field, set by default to 664 for files, 775 for folders.
-
-### ZIP64
 
 ### <del>ZIP64</del>
 
