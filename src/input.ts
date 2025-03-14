@@ -6,6 +6,7 @@ export type ZipFileDescription = {
   modDate: Date
   bytes: ReadableStream<Uint8Array> | Uint8Array | Promise<Uint8Array>
   crc?: number // will be computed later
+  mode: number // UNIX permissions, 0o664 by default
 }
 
 /** The file name and modification date will be read from the input if it is a File or Response;
@@ -13,25 +14,27 @@ export type ZipFileDescription = {
  * For other types of input, the `name` is required and `modDate` will default to *now*.
  * @param modDate should be a Date or timestamp or anything else that works in `new Date()`
  */
-  export function normalizeInput(input: File | Response | BufferLike | StreamLike, modDate?: any): ZipFileDescription {
+  export function normalizeInput(input: File | Response | BufferLike | StreamLike, modDate?: any, mode = 0o664): ZipFileDescription {
   if (modDate !== undefined && !(modDate instanceof Date)) modDate = new Date(modDate)
 
   if (input instanceof File) return {
     modDate: modDate || new Date(input.lastModified),
-    bytes: input.stream()
+    bytes: input.stream(),
+    mode
   }
   if (input instanceof Response) return {
     modDate: modDate || new Date(input.headers.get("Last-Modified") || Date.now()),
-    bytes: input.body!
+    bytes: input.body!,
+    mode
   }
 
   if (modDate === undefined) modDate = new Date()
   else if (isNaN(modDate)) throw new Error("Invalid modification date.")
-  if (typeof input === "string") return { modDate, bytes: encodeString(input) }
-  if (input instanceof Blob) return { modDate, bytes: input.stream() }
-  if (input instanceof Uint8Array || input instanceof ReadableStream) return { modDate, bytes: input }
-  if (input instanceof ArrayBuffer || ArrayBuffer.isView(input)) return { modDate, bytes: makeUint8Array(input) }
-  if (Symbol.asyncIterator in input) return { modDate, bytes: ReadableFromIterator(input[Symbol.asyncIterator]()) }
+  if (typeof input === "string") return { modDate, bytes: encodeString(input), mode }
+  if (input instanceof Blob) return { modDate, bytes: input.stream(), mode }
+  if (input instanceof Uint8Array || input instanceof ReadableStream) return { modDate, bytes: input, mode }
+  if (input instanceof ArrayBuffer || ArrayBuffer.isView(input)) return { modDate, bytes: makeUint8Array(input), mode }
+  if (Symbol.asyncIterator in input) return { modDate, bytes: ReadableFromIterator(input[Symbol.asyncIterator]()), mode }
   throw new TypeError("Unsupported input format.")
 }
 

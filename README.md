@@ -171,7 +171,7 @@ If you need a feature, you're very welcome to [open an issue](https://github.com
 
 Should be straightforward to implement if needed. Maybe `client-zip` should allow extending by third-party code so those extra fields can be plug-ins instead of built into the library.
 
-The UNIX permissions in external attributes (ignored by many readers, though) are hardcoded to 664, could be made configurable.
+<del>The UNIX permissions in external attributes (ignored by many readers, though) are hardcoded to 664, could be made configurable.</del> The UNIX permissions are now configurable via the `mode` field, set by default to 664 for files, 775 for folders.
 
 ### ZIP64
 
