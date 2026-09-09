@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.132.0/testing/asserts.ts"
+import { assertEquals, assertRejects } from "https://deno.land/std@0.132.0/testing/asserts.ts"
 import { downloadZip } from "../src/index.ts"
 
 const zipSpec = Deno.readFileSync("./test/APPNOTE.TXT")
@@ -39,4 +39,21 @@ Deno.test("downloadZip propagates pulling and cancellation", async (t) => {
     assertEquals(thrown.length, 1)
     assertEquals(thrown[0], error)
   })
+})
+
+Deno.test("downloadZip awaits asynchronous iterator cancellation", async () => {
+  let finalized = false
+  async function* files() {
+    try {
+      yield { name: "example.txt", input: "example" }
+    } finally {
+      await Promise.resolve()
+      finalized = true
+    }
+  }
+  const reader = downloadZip(files()).body!.getReader()
+  await reader.read()
+  await reader.read()
+  await assertRejects(() => reader.cancel(new Error("cancel async export")), Error, "cancel async export")
+  assertEquals(finalized, true)
 })
