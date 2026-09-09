@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.132.0/testing/asserts.ts"
-import { downloadZip } from "../src/index.ts"
+import { downloadZip, predictLength } from "../src/index.ts"
 
 const zipSpec = Deno.readFileSync("./test/APPNOTE.TXT")
 const specName = new TextEncoder().encode("APPNOTE.TXT")
@@ -39,4 +39,28 @@ Deno.test("downloadZip propagates pulling and cancellation", async (t) => {
     assertEquals(thrown.length, 1)
     assertEquals(thrown[0], error)
   })
+})
+
+Deno.test("ZIP64 preserves central-directory entry counts at the 16-bit boundary", async (t) => {
+  for (const count of [65534, 65535, 65536]) {
+    await t.step(`${count} empty entries`, async () => {
+      function* entries() {
+        for (let i = 0; i < count; i++) yield { name: `empty-${i}`, input: "" }
+      }
+      const bytes = await downloadZip(entries()).arrayBuffer()
+      assertEquals(BigInt(bytes.byteLength), predictLength(entries()))
+      const view = new DataView(bytes), end = bytes.byteLength - 22
+      assertEquals(view.getUint32(end), 0x504b0506)
+      assertEquals(view.getUint16(end + 10, true), Math.min(count, 65535))
+      if (count >= 65535) {
+        const zip64 = end - 76
+        assertEquals(view.getUint32(zip64), 0x504b0606)
+        assertEquals(view.getBigUint64(zip64 + 24, true), BigInt(count))
+        assertEquals(view.getBigUint64(zip64 + 32, true), BigInt(count))
+        assertEquals(view.getUint32(zip64 + 56), 0x504b0607)
+        assertEquals(view.getBigUint64(zip64 + 64, true), BigInt(zip64))
+        assertEquals(view.getBigUint64(zip64 + 40, true) + view.getBigUint64(zip64 + 48, true), BigInt(zip64))
+      }
+    })
+  }
 })
