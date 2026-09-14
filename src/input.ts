@@ -73,8 +73,8 @@ export function ReadableFromIterator<T extends BufferLike>(iter: AsyncIterator<T
         }
       }
     },
-    cancel(err) {
-      upstream.throw?.(err)
+    async cancel(err) {
+      await upstream.throw?.(err)
     }
   })
 }
