@@ -1,3 +1,7 @@
+## 2.5.1:
+
+* bugfix: the error from aborting the input stream is now passed on by the output stream.
+
 ## 2.5.0:
 
 * new: `mode` field in input objects can override the default POSIX file mode.
