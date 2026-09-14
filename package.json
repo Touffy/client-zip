@@ -1,6 +1,6 @@
 {
   "name": "client-zip",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "A tiny and fast client-side streaming ZIP generator",
   "browser": "index.js",
   "module": "index.js",
@@ -17,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:Touffy/client-zip.git"
+    "url": "git+ssh://git@github.com/Touffy/client-zip.git"
   },
   "keywords": [
     "zip",
