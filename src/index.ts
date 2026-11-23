@@ -1,6 +1,6 @@
 import "./polyfills.ts"
 import { type BufferLike, type StreamLike, normalizeInput, ReadableFromIterator } from "./input.ts"
-import { type Metadata, normalizeMetadata } from "./metadata.ts"
+import { type Metadata, normalizeMetadata, isSizeExact } from "./metadata.ts"
 import { loadFiles, contentLength, type ForAwaitable } from "./zip.ts"
 
 /** The file name, modification date and size will be read from the input;
@@ -32,6 +32,10 @@ export type Options = {
    * - `false`: always off (ArrayBuffers will *never* be flagged as UTF-8),
    * - `undefined`: each ArrayBuffer will be tested and flagged if it is valid UTF-8. */
   buffersAreUTF8?: boolean
+  /** Compress every file with the DEFLATE method, using the browser's `CompressionStream("deflate-raw")`.
+   * Off by default: it costs CPU time, and the archive's length can no longer be predicted,
+   * so it can't be combined with the `length` or `metadata` options. */
+  compress?: boolean
 }
 
 function normalizeArgs(file: InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder | JustMeta) {
@@ -56,7 +60,7 @@ function mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputW
       const [metaArgs, dataArgs] = normalizeArgs(res.value)
       // @ts-ignore type inference isn't good enough for this… yet…
       // but rewriting the code to be more explicit would make it longer
-      return { done: false, value: Object.assign(normalizeInput(...dataArgs), normalizeMetadata(...metaArgs)) }
+      return { done: false, value: Object.assign(normalizeInput(...dataArgs), normalizeMetadata(...metaArgs), { sizeIsExact: isSizeExact(metaArgs[0], metaArgs[2]) }) }
     },
     throw: iterator.throw?.bind(iterator),
     [Symbol.asyncIterator]() { return this }
@@ -68,6 +72,8 @@ function mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputW
 export const predictLength = (files: Iterable<InputWithMeta | InputWithSizeMeta | JustMeta | InputFolder>): bigint => contentLength(mapMeta(files))
 
 export function downloadZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, options: Options = {}): Response {
+  if (options.compress && (options.length || options.metadata))
+    throw new Error("The length of a compressed archive can't be predicted.")
   const headers: Record<string, any> = { "Content-Type": "application/zip", "Content-Disposition": "attachment" }
   if ((typeof options.length === "bigint" || Number.isInteger(options.length)) && options.length! > 0) headers["Content-Length"] = String(options.length)
   if (options.metadata) headers["Content-Length"] = String(predictLength(options.metadata))
@@ -75,6 +81,8 @@ export function downloadZip(files: ForAwaitable<InputWithMeta | InputWithSizeMet
 }
 
 export function makeZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, options: Options = {}) {
+  // fail early, not in the middle of the archive, where CompressionStream or "deflate-raw" is missing
+  if (options.compress) new CompressionStream("deflate-raw")
   const mapped = mapFiles(files)
   return ReadableFromIterator(loadFiles(mapped, options), mapped);
 }

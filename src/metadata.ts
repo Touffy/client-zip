@@ -4,6 +4,12 @@ import type { BufferLike, StreamLike } from "./input.ts"
 export type Metadata = {
   encodedName: Uint8Array
   uncompressedSize?: bigint
+  /** bytes actually written for the file's data (differs from uncompressedSize only when compressing) */
+  compressedSize?: bigint
+  /** "version needed to extract" announced in the local header, so the central header can match it */
+  zipVersion?: number
+  /** the size is known before reading the data: intrinsic (File, Blob, string, buffer) or given by the caller */
+  sizeIsExact?: boolean
   /** keep track of whether the filename was supplied as a Buffer-like object */
   nameIsBuffer: boolean
 }
@@ -34,6 +40,15 @@ export function normalizeMetadata(input?: File | Response | BufferLike | StreamL
   if (input instanceof ArrayBuffer || ArrayBuffer.isView(input)) return { encodedName, uncompressedSize: BigInt(input.byteLength), nameIsBuffer }
   // @ts-ignore
   return { encodedName, uncompressedSize: getUncompressedSize(input, size), nameIsBuffer }
+}
+
+/** Whether normalizeMetadata's uncompressedSize is known to be exact before the data is read.
+ * A Response's Content-Length is not, when it is missing or the response has a Content-Encoding. */
+export function isSizeExact(input?: File | Response | BufferLike | StreamLike, size?: number | bigint): boolean {
+  if (size !== undefined && size > -1) return true
+  if (input instanceof Response) return input.headers.has("content-length") && !input.headers.has("content-encoding")
+  return input === undefined || input instanceof File || input instanceof Blob || typeof input === "string"
+    || input instanceof ArrayBuffer || ArrayBuffer.isView(input)
 }
 
 function getUncompressedSize(input: unknown, size: number | bigint): bigint | undefined {

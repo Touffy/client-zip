@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects } from "@std/assert"
+import { assertEquals, assertRejects, assertThrows } from "@std/assert"
 import { downloadZip } from "../src/index.ts"
 
 const zipSpec = Deno.readFileSync("./test/APPNOTE.TXT")
@@ -56,4 +56,58 @@ Deno.test("downloadZip awaits asynchronous iterator cancellation", async () => {
   await reader.read()
   await assertRejects(() => reader.cancel(new Error("cancel async export")), Error, "cancel async export")
   assertEquals(finalized, true)
+})
+
+Deno.test("downloadZip refuses to predict the length of a compressed archive", () => {
+  assertThrows(() => downloadZip([], { compress: true, metadata: [] }))
+  assertThrows(() => downloadZip([], { compress: true, length: 100 }))
+})
+
+Deno.test("downloadZip writes ZIP version 2.0 and DEFLATE entries that inflate back to the input", async () => {
+  const zip = new Uint8Array(await downloadZip([{ input: zipSpec, name: specName, lastModified: specDate }], { compress: true }).arrayBuffer())
+  const view = new DataView(zip.buffer)
+  assertEquals(view.getUint16(4, true), 20) // local header: version needed
+  assertEquals(view.getUint16(8, true), 8) // local header: DEFLATE
+  const central = zip.length - 22 - 46 - specName.length
+  assertEquals(view.getUint32(central), 0x504b0102)
+  assertEquals(view.getUint16(central + 6, true), 20)
+  assertEquals(view.getUint16(central + 10, true), 8)
+  const compressedSize = view.getUint32(central + 20, true)
+  assertEquals(view.getUint32(central + 24, true), zipSpec.length)
+  const data = zip.subarray(30 + specName.length, 30 + specName.length + compressedSize)
+  const inflated = await new Response(new Response(data.slice()).body!.pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer()
+  assertEquals(new Uint8Array(inflated), zipSpec)
+})
+
+Deno.test("downloadZip announces ZIP version 2.0 only for entries whose size is known in advance", async () => {
+  const stream = () => new Blob(["streamed"]).stream()
+  const makeInputs = () => [
+    { name: "blob", input: new Blob(["blob"]), expected: 20 },
+    { name: "string", input: "string", expected: 20 },
+    { name: "buffer", input: new Uint8Array(3), expected: 20 },
+    { name: "empty", input: new Blob([]), expected: 20 },
+    { name: "sized-stream", input: stream(), size: 8, expected: 20 },
+    { name: "stream", input: stream(), expected: 45 },
+    { name: "response-with-length", input: new Response("four", { headers: { "content-length": "4" } }), expected: 20 },
+    { name: "response-without-length", input: new Response(stream()), expected: 45 },
+    { name: "response-encoded", input: new Response("four", { headers: { "content-length": "4", "content-encoding": "gzip" } }), expected: 45 },
+    { name: "folder", expected: 20 },
+  ]
+  for (const compress of [false, true]) {
+    const inputs = makeInputs()
+    const zip = new Uint8Array(await downloadZip(inputs.map(({ expected: _, ...file }) => file), { compress }).arrayBuffer())
+    const view = new DataView(zip.buffer)
+    let central = view.getUint32(zip.length - 6, true)
+    for (const { name, expected } of inputs) {
+      assertEquals(view.getUint32(central), 0x504b0102)
+      const nameLength = view.getUint16(central + 28, true)
+      const entryName = new TextDecoder().decode(zip.subarray(central + 46, central + 46 + nameLength))
+      assertEquals(entryName.replace(/\/$/, ""), name)
+      assertEquals([name, view.getUint16(central + 6, true)], [name, expected])
+      const local = view.getUint32(central + 42, true)
+      assertEquals([name, view.getUint16(local + 4, true)], [name, expected])
+      assertEquals([name, view.getUint16(central + 10, true)], [name, compress && name !== "folder" ? 8 : 0])
+      central += 46 + nameLength + view.getUint16(central + 30, true)
+    }
+  }
 })

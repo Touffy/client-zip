@@ -16,6 +16,13 @@ export type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
 
 type Zip64FieldLength = 0 | 12 | 28
 
+const zipVersion20 = 0x14, zipVersion45 = 0x2d
+/** Uncompressed sizes below this leave room for DEFLATE's expansion of incompressible data in browsers' zlib
+ * (5 bytes per 16 KiB stored block, under 2 MiB for a 4 GiB file). If the compressed data still reaches 4 GiB
+ * (a runtime that flushes every chunk can expand more), the entry gets its Zip64 field anyway and the central
+ * header says 4.5. */
+const smallFileLimit = 0xffe0_0000n
+
 export function contentLength(files: Iterable<Omit<Metadata, 'nameIsBuffer'>>): bigint {
   let centralLength = BigInt(endLength)
   let offset = 0n
@@ -57,23 +64,27 @@ export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metad
   // write files
   for await (const file of files) {
     const flags = flagNameUTF8(file, options.buffersAreUTF8)
-    yield fileHeader(file, flags)
+    const compress = file.isFile && !!options.compress
+    // version 2.0 when the size is known in advance and no Zip64 field can be needed for this entry
+    file.zipVersion = file.sizeIsExact && file.uncompressedSize! < smallFileLimit ? zipVersion20 : zipVersion45
+    yield fileHeader(file, flags, compress)
     yield new Uint8Array(file.encodedName)
     if (file.isFile) {
-      yield* fileData(file)
+      yield* compress ? deflatedFileData(file) : fileData(file)
     }
-    const bigFile = file.uncompressedSize! >= 0xffffffffn
+    const dataSize = file.compressedSize ?? file.uncompressedSize!
+    const bigFile = file.uncompressedSize! >= 0xffffffffn || dataSize >= 0xffffffffn
     const bigOffset = offset >= 0xffffffffn
     // @ts-ignore
     const zip64HeaderLength = (bigOffset * 12 | bigFile * 28) as Zip64FieldLength
     yield dataDescriptor(file, bigFile)
 
-    centralRecord.push(centralHeader(file, offset, flags, zip64HeaderLength))
+    centralRecord.push(centralHeader(file, offset, flags, zip64HeaderLength, compress))
     centralRecord.push(file.encodedName)
     if (zip64HeaderLength) centralRecord.push(zip64ExtraField(file, offset, zip64HeaderLength))
     if (bigFile) offset += 8n // because the data descriptor will have 64-bit sizes
     fileCount++
-    offset += BigInt(fileHeaderLength + descriptorLength + file.encodedName.length) + file.uncompressedSize!
+    offset += BigInt(fileHeaderLength + descriptorLength + file.encodedName.length) + dataSize
     archiveNeedsZip64 ||= bigFile
   }
 
@@ -115,11 +126,11 @@ export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metad
   yield makeUint8Array(end)
 }
 
-export function fileHeader(file: ZipEntryDescription & Metadata, flags = 0) {
+export function fileHeader(file: ZipEntryDescription & Metadata, flags = 0, compress = false) {
   const header = makeBuffer(fileHeaderLength)
   header.setUint32(0, fileHeaderSignature)
-  header.setUint32(4, 0x2d_00_0800 | flags) // ZIP version 4.5 | flags, bit 3 on = size and CRCs will be zero
-  // leave compression = zero (2 bytes) until we implement compression
+  header.setUint32(4, (file.zipVersion ?? zipVersion45) << 24 | 0x00_0800 | flags) // ZIP version | flags, bit 3 on = size and CRCs will be zero
+  if (compress) header.setUint16(8, 8, true) // compression method 8 = DEFLATE
   formatDOSDateTime(file.modDate, header, 10)
   // leave CRC = zero (4 bytes) because we'll write it later, in the central repo
   // leave lengths = zero (2x4 bytes) because we'll write them later, in the central repo
@@ -148,36 +159,72 @@ export async function* fileData(file: ZipFileDescription & Metadata) {
   }
 }
 
+/** Like fileData, but yields the file's bytes compressed with DEFLATE,
+ * while the CRC and uncompressedSize are computed on the original bytes. */
+export async function* deflatedFileData(file: ZipFileDescription & Metadata) {
+  let { bytes } = file
+  if ("then" in bytes) bytes = await bytes
+  const source = bytes instanceof Uint8Array
+    ? new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(bytes as Uint8Array); controller.close() } })
+    : bytes
+  file.crc = 0
+  file.uncompressedSize = 0n
+  file.compressedSize = 0n
+  const reader = source.pipeThrough(new TransformStream({
+    transform(chunk: Uint8Array, controller) {
+      file.crc = crc32(chunk, file.crc)
+      file.uncompressedSize! += BigInt(chunk.length)
+      controller.enqueue(chunk)
+    }
+  })).pipeThrough(new CompressionStream("deflate-raw")).getReader()
+  try {
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      file.compressedSize += BigInt(value!.length)
+      yield value!
+    }
+  } finally {
+    // release the pipe (and the source) if the archive is abandoned midway
+    reader.cancel().catch(() => {})
+  }
+}
+
 export function dataDescriptor(file: ZipEntryDescription & Metadata, needsZip64: boolean) {
   const header = makeBuffer(descriptorLength + (needsZip64 ? 8 : 0))
   header.setUint32(0, descriptorSignature)
   header.setUint32(4, file.isFile ? file.crc! : 0, true)
+  const compressedSize = file.compressedSize ?? file.uncompressedSize!
   if (needsZip64) {
-    header.setBigUint64(8, file.uncompressedSize!, true)
+    header.setBigUint64(8, compressedSize, true)
     header.setBigUint64(16, file.uncompressedSize!, true)
   } else {
-    header.setUint32(8, clampInt32(file.uncompressedSize!), true)
+    header.setUint32(8, clampInt32(compressedSize), true)
     header.setUint32(12, clampInt32(file.uncompressedSize!), true)
   }
   return makeUint8Array(header)
 }
 
-export function centralHeader(file: ZipEntryDescription & Metadata, offset: bigint, flags = 0, zip64HeaderLength: Zip64FieldLength = 0) {
+export function centralHeader(file: ZipEntryDescription & Metadata, offset: bigint, flags = 0, zip64HeaderLength: Zip64FieldLength = 0, compress = false) {
   const header = makeBuffer(centralHeaderLength)
   header.setUint32(0, centralHeaderSignature)
-  header.setUint32(4, 0x2d03_2d_00) // UNIX app version 4.5 | ZIP version 4.5
+  // UNIX app version 4.5 | ZIP version 2.0, unless the local header said 4.5 or this entry needs a Zip64 field
+  const version = zip64HeaderLength ? zipVersion45 : file.zipVersion ?? zipVersion45
+  header.setUint32(4, 0x2d03_00_00 | version << 8)
   header.setUint16(8, 0x0800 | flags) // flags, bit 3 on
-  // leave compression = zero (2 bytes) until we implement compression
+  if (compress) header.setUint16(10, 8, true) // compression method 8 = DEFLATE
   formatDOSDateTime(file.modDate, header, 12)
   header.setUint32(16, file.isFile ? file.crc! : 0, true)
-  header.setUint32(20, clampInt32(file.uncompressedSize!), true)
-  header.setUint32(24, clampInt32(file.uncompressedSize!), true)
+  // when the Zip64 field holds the sizes, it holds all three values, so all three fields point to it (APPNOTE 4.5.3)
+  const allInZip64 = (zip64HeaderLength & 16) !== 0
+  header.setUint32(20, allInZip64 ? 0xffffffff : clampInt32(file.compressedSize ?? file.uncompressedSize!), true)
+  header.setUint32(24, allInZip64 ? 0xffffffff : clampInt32(file.uncompressedSize!), true)
   header.setUint16(28, file.encodedName.length, true)
   header.setUint16(30, zip64HeaderLength, true)
   // useless disk fields = zero (4 bytes)
   // useless attributes = zero (4 bytes)
   header.setUint16(40, file.mode | (file.isFile ? 0o100000 : 0o040000), true)
-  header.setUint32(42, clampInt32(offset), true) // offset
+  header.setUint32(42, allInZip64 ? 0xffffffff : clampInt32(offset), true) // offset
   return makeUint8Array(header)
 }
 
@@ -187,7 +234,7 @@ export function zip64ExtraField(file: ZipEntryDescription & Metadata, offset: bi
   header.setUint16(2, zip64HeaderLength - 4, true)
   if (zip64HeaderLength & 16) {
     header.setBigUint64(4, file.uncompressedSize!, true)
-    header.setBigUint64(12, file.uncompressedSize!, true)
+    header.setBigUint64(12, file.compressedSize ?? file.uncompressedSize!, true)
   }
   header.setBigUint64(zip64HeaderLength - 8, offset, true)
   return makeUint8Array(header)

@@ -55,7 +55,7 @@ client-zip works in all modern browsers (and Deno) out of the box. If you bundle
 
 The default release of version 2 targets ES2020 and is a bare ES module + an IIFE version suitable for a ServiceWorker's `importScript`. Version 1 releases were built for ES2018.
 
-When necessary, client-zip version 2 will generate Zip64 archives. It will always specify "ZIP version 4.5 required to unzip", even when that's not really true. The resulting files are not readable by every ZIP reader out there.
+When necessary, client-zip version 2 will generate Zip64 archives. Entries whose size is known in advance (a `File`, `Blob`, string, buffer, a `Response` with a Content-Length and no Content-Encoding, or any input with a `size`) and that need no Zip64 field say "ZIP version 2.0 required to unzip". Other entries specify version 4.5, because a stream of unknown length might turn out to need Zip64; those may not be readable by every ZIP reader out there. If an entry announced as 2.0 ends up needing a Zip64 field after all (because it starts beyond 4 GiB in the archive, or a given `size` was wrong), its central directory record says 4.5 while its local header still says 2.0.
 
 # Usage
 
@@ -77,13 +77,19 @@ function predictLength(metadata: Iterable<MetadataTypes>): bigint
   - `input`: something that contains your data; it can be a `File`, a `Blob`, a `Response`, some kind of `ArrayView` or a raw `ArrayBuffer`, a `ReadableStream<Uint8Array>` (yes, only Uint8Arrays, but most APIs give you just that type anyway), an `AsyncIterable<ArrayBuffer | ArrayView | string>`, … or just a string.
   - `mode`: override the POSIX file mode (by default, it will be `0o664` for files and `0o775` for folders). Should be between `0` and `0o777` — disrespect that constraint at your own risk.
 
-The *options* argument currently supports three properties, `length`, `metadata` (see [Content-Length prediction](#content-length-prediction)) and `buffersAreUTF8` (see [Filename encoding](#filename-encoding)).
+The *options* argument currently supports four properties, `length`, `metadata` (see [Content-Length prediction](#content-length-prediction)), `buffersAreUTF8` (see [Filename encoding](#filename-encoding)) and `compress` (see [Compression](#compression)).
 
 The function returns a `Response` immediately. You don't need to wait for the whole ZIP to be ready. It's up to you if you want to pipe the Response somewhere (e.g. if you are using `client-zip` inside a ServiceWorker) or let the browser buffer it all in a Blob.
 
 Unless your list of inputs is quite small, you should prefer generators (when zipping Files or other resources that are already available) and async generators (when zipping Responses so you can `fetch` them lazily, or other resources that are generated last-minute so you don't need to store them longer than necessary) to provide the inputs to `downloadZip`.
 
 `makeZip` is just like `downloadZip` except it returns the underlying `ReadableStream` directly, for use cases that do not involve actually downloading to the client filesystem.
+
+## Compression
+
+By default, client-zip stores files without compression. Set `compress: true` in the *options* argument to compress every file with the DEFLATE method, using the browser's own [`CompressionStream("deflate-raw")`](https://developer.mozilla.org/en-US/docs/Web/API/CompressionStream) (Chrome and Edge 103, Firefox 113, Safari 16.4). Files are still streamed one chunk at a time, so memory use stays flat.
+
+It is worth it for text-like files that will be stored or sent on rather than extracted right away (CSV, logs, source code, some CAD formats shrink 4 to 10 times), and a waste of CPU for files that are already compressed (images, video, PDF, Office documents). Since the compressed size is not known in advance, `compress` cannot be combined with the `length` or `metadata` options.
 
 ## Content-Length prediction
 
@@ -166,7 +172,7 @@ The datasets I used in the new tests are not public domain, but nothing sensitiv
 
 # Known Issues
 
-* MS Office documents must be stored using ZIP version 2.0 ; [use client-zip^1 to generate those](https://github.com/Touffy/client-zip/issues/59), you don't need client-zip^2 features for Office documents anyway.
+* MS Office documents must be stored using ZIP version 2.0 ([#59](https://github.com/Touffy/client-zip/issues/59)): give client-zip the entries' sizes (or use Blobs) so it can announce version 2.0, or use client-zip^1.
 * client-zip cannot be bundled by SSR frameworks that expect it to run server-side too ([workaround](https://github.com/Touffy/client-zip/issues/28#issuecomment-1018033984)).
 * Firefox may kill a Service Worker that is still feeding a download ([workaround](https://github.com/Touffy/client-zip/issues/46#issuecomment-1259223708)).
 * Safari could not download from a Service Worker until version 15.4 (released 4 march 2022).
@@ -190,9 +196,9 @@ Should be straightforward to implement if needed. Maybe `client-zip` should allo
 
 Done.
 
-### compression
+### <del>compression</del>
 
-Limited use case. If the user is going to extract the archive just after downloading anyway, it's a waste of CPU. Implementation should be relatively easy with the new CompressionStream API. Incompatible with content-length prediction.
+Done, as an option (see [Compression](#compression)).
 
 ### encryption
 
