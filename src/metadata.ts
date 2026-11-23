@@ -10,6 +10,8 @@ export type Metadata = {
   zipVersion?: number
   /** the size is known before reading the data: intrinsic (File, Blob, string, buffer) or given by the caller */
   sizeIsExact?: boolean
+  /** whether this file will be compressed (its own `compress` property, or else the `compress` option) */
+  deflate?: boolean
   /** keep track of whether the filename was supplied as a Buffer-like object */
   nameIsBuffer: boolean
 }

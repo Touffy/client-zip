@@ -111,3 +111,52 @@ Deno.test("downloadZip announces ZIP version 2.0 only for entries whose size is 
     }
   }
 })
+
+async function methodsOf(response: Response) {
+  const zip = new Uint8Array(await response.arrayBuffer())
+  const view = new DataView(zip.buffer)
+  const methods: Record<string, number> = {}
+  let central = view.getUint32(zip.length - 6, true)
+  while (view.getUint32(central) === 0x504b0102) {
+    const nameLength = view.getUint16(central + 28, true)
+    const name = new TextDecoder().decode(zip.subarray(central + 46, central + 46 + nameLength))
+    methods[name] = view.getUint16(central + 10, true)
+    central += 46 + nameLength + view.getUint16(central + 30, true) + view.getUint16(central + 32, true)
+  }
+  return methods
+}
+
+Deno.test("downloadZip compresses the files whose MIME type matches the compress option", async () => {
+  const methods = await methodsOf(downloadZip([
+    new File(["text"], "plain.txt", { type: "text/plain" }),
+    { name: "upper.csv", input: new Blob(["a,b"], { type: "TEXT/CSV" }) },
+    { name: "image.png", input: new Blob([new Uint8Array(4)], { type: "image/png" }) },
+    { name: "texts.bin", input: new Blob(["x"], { type: "texts/x" }) },
+    { name: "data.json", input: new Response("{}", { headers: { "content-type": "application/json; charset=utf-8" } }) },
+    { name: "untyped.json", input: new Response("{}", { headers: { "content-type": "" } }) },
+    { name: "string.txt", input: "string" },
+    { name: "buffer.bin", input: new Uint8Array(4) },
+    { name: "stream.bin", input: new Blob(["stream"]).stream() },
+    { name: "folder" },
+  ], { compress: ["text/*", /json$/] }))
+  assertEquals(methods, {
+    "plain.txt": 8, "upper.csv": 8, "image.png": 0, "texts.bin": 0, "data.json": 8, "untyped.json": 0,
+    "string.txt": 8, "buffer.bin": 0, "stream.bin": 0, "folder/": 0,
+  })
+})
+
+Deno.test("a file's own compress property overrides the compress option", async () => {
+  const files = () => [
+    { name: "buffer.bin", input: new Uint8Array(4), compress: true },
+    { name: "page.html", input: new Blob(["<p>"], { type: "text/html" }), compress: false },
+    { name: "string.txt", input: "string" },
+  ]
+  assertEquals(await methodsOf(downloadZip(files(), { compress: ["text/*"] })), { "buffer.bin": 8, "page.html": 0, "string.txt": 8 })
+  assertEquals(await methodsOf(downloadZip(files(), { compress: true })), { "buffer.bin": 8, "page.html": 0, "string.txt": 8 })
+  assertEquals(await methodsOf(downloadZip(files())), { "buffer.bin": 8, "page.html": 0, "string.txt": 0 })
+})
+
+Deno.test("downloadZip refuses to compress a file when the archive's length was given", async () => {
+  assertThrows(() => downloadZip([], { compress: ["text/*"], length: 100 }))
+  await assertRejects(() => downloadZip([{ name: "a.bin", input: new Uint8Array(4), compress: true }], { length: 100 }).arrayBuffer())
+})

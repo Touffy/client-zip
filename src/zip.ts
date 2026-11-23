@@ -64,7 +64,9 @@ export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metad
   // write files
   for await (const file of files) {
     const flags = flagNameUTF8(file, options.buffersAreUTF8)
-    const compress = file.isFile && !!options.compress
+    const compress = file.isFile && (file.deflate ?? !!options.compress)
+    if (compress && (options.length || options.metadata))
+      throw new Error("The length of a compressed archive can't be predicted.")
     // version 2.0 when the size is known in advance and no Zip64 field can be needed for this entry
     file.zipVersion = file.sizeIsExact && file.uncompressedSize! < smallFileLimit ? zipVersion20 : zipVersion45
     yield fileHeader(file, flags, compress)

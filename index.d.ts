@@ -3,13 +3,13 @@ type StreamLike = ReadableStream<Uint8Array> | AsyncIterable<BufferLike>
 
 /** The file name, modification date and size will be read from the input;
  * extra arguments can be given to override the input’s metadata. */
- type InputWithMeta = File | Response | { input: File | Response, name?: any, lastModified?: any, size?: number | bigint, mode?: number }
+ type InputWithMeta = File | Response | { input: File | Response, name?: any, lastModified?: any, size?: number | bigint, mode?: number, compress?: boolean }
 
  /** Intrinsic size, but the file name must be provided and modification date can’t be guessed. */
- type InputWithSizeMeta = { input: BufferLike, name: any, lastModified?: any, size?: number | bigint, mode?: number }
+ type InputWithSizeMeta = { input: BufferLike, name: any, lastModified?: any, size?: number | bigint, mode?: number, compress?: boolean }
  
  /** The file name must be provided ; modification date and content length can’t be guessed. */
- type InputWithoutMeta = { input: StreamLike, name: any, lastModified?: any, size?: number | bigint, mode?: number }
+ type InputWithoutMeta = { input: StreamLike, name: any, lastModified?: any, size?: number | bigint, mode?: number, compress?: boolean }
  
 /** The folder name must be provided ; modification date can’t be guessed. */
 type InputFolder = { name: any, lastModified?: any, input?: never, size?: never, mode?: number }
@@ -32,10 +32,16 @@ type InputFolder = { name: any, lastModified?: any, input?: never, size?: never,
    * - `false`: always off (ArrayBuffers will *never* be flagged as UTF-8),
    * - `undefined`: each ArrayBuffer will be tested and flagged if it is valid UTF-8. */
   buffersAreUTF8?: boolean
-  /** Compress every file with the DEFLATE method, using the browser's `CompressionStream("deflate-raw")`.
-   * Off by default: it costs CPU time, and the archive's length can no longer be predicted,
+  /** Compress files with the DEFLATE method, using the browser's `CompressionStream("deflate-raw")`.
+   * - `true`: compress every file,
+   * - an array: compress the files whose MIME type matches one of its items: a string matches the exact type
+   *   or, as `"type/*"`, every subtype; a RegExp is tested against the type. Strings count as `text/plain`;
+   *   buffers and streams have no type, so they are never matched,
+   * - `false` or `undefined` (default): store every file.
+   * A file's own `compress` property overrides this option.
+   * Compression costs CPU time, and the archive's length can no longer be predicted,
    * so it can't be combined with the `length` or `metadata` options. */
-  compress?: boolean
+  compress?: boolean | Array<string | RegExp>
 } 
 
 /** Given an iterable of file metadata (or equivalent),

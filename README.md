@@ -89,7 +89,17 @@ Unless your list of inputs is quite small, you should prefer generators (when zi
 
 By default, client-zip stores files without compression. Set `compress: true` in the *options* argument to compress every file with the DEFLATE method, using the browser's own [`CompressionStream("deflate-raw")`](https://developer.mozilla.org/en-US/docs/Web/API/CompressionStream) (Chrome and Edge 103, Firefox 113, Safari 16.4). Files are still streamed one chunk at a time, so memory use stays flat.
 
-It is worth it for text-like files that will be stored or sent on rather than extracted right away (CSV, logs, source code, some CAD formats shrink 4 to 10 times), and a waste of CPU for files that are already compressed (images, video, PDF, Office documents). Since the compressed size is not known in advance, `compress` cannot be combined with the `length` or `metadata` options.
+It is worth it for text-like files that will be stored or sent on rather than extracted right away (CSV, logs, source code, some CAD formats shrink 4 to 10 times), and a waste of CPU for files that are already compressed (images, video, PDF, Office documents). So instead of `true`, `compress` can be a list of MIME types to compress, for archives that mix both kinds:
+
+```js
+downloadZip(files, { compress: ["text/*", "image/svg+xml", /json$/] })
+```
+
+A string matches the exact type, or every subtype when written as `"type/*"`. A RegExp is tested against the type. The type comes from a `File` or `Blob`'s `type`, or a `Response`'s Content-Type (without parameters such as `; charset=utf-8`), and strings count as `text/plain`. Buffers and streams have no type, so a list never matches them.
+
+Each input object can also have its own `compress` property (`true` or `false`), which overrides the option for that file.
+
+Since the compressed size is not known in advance, compression cannot be combined with the `length` or `metadata` options.
 
 ## Content-Length prediction
 
