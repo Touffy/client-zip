@@ -2,8 +2,8 @@ import { makeBuffer, makeUint8Array, clampInt16, clampInt32 } from "./utils.ts"
 import { crc32 } from "./crc32.ts"
 import { formatDOSDateTime } from "./datetime.ts"
 import type { ZipEntryDescription, ZipFileDescription } from "./input.ts"
-import { Metadata } from "./metadata.ts"
-import { Options } from "./index.ts"
+import type { Metadata } from "./metadata.ts"
+import type { Options } from "./index.ts"
 
 const fileHeaderSignature = 0x504b_0304, fileHeaderLength = 30
 const descriptorSignature = 0x504b_0708, descriptorLength = 16
@@ -16,7 +16,7 @@ export type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
 
 type Zip64FieldLength = 0 | 12 | 28
 
-export function contentLength(files: Iterable<Omit<Metadata, 'nameIsBuffer'>>) {
+export function contentLength(files: Iterable<Omit<Metadata, 'nameIsBuffer'>>): bigint {
   let centralLength = BigInt(endLength)
   let offset = 0n
   let archiveNeedsZip64 = false

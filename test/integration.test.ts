@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects } from "https://deno.land/std@0.132.0/testing/asserts.ts"
+import { assertEquals, assertRejects } from "@std/assert"
 import { downloadZip } from "../src/index.ts"
 
 const zipSpec = Deno.readFileSync("./test/APPNOTE.TXT")
@@ -6,14 +6,14 @@ const specName = new TextEncoder().encode("APPNOTE.TXT")
 const specDate = new Date("2019-04-26T02:00")
 
 Deno.test("downloadZip propagates pulling and cancellation", async (t) => {
-  const thrown: any[] = []
+  const thrown: unknown[] = []
   let pulled = 0
   const input: IterableIterator<{ input: Uint8Array, name: Uint8Array, lastModified: Date }> = {
     next() {
       if (pulled++) return { done: true, value: undefined }
       return { done: false, value: { input: zipSpec, name: specName, lastModified: specDate } }
     },
-    throw(err: any) {
+    throw(err: unknown) {
       thrown.push(err)
       return { done: true, value: undefined }
     },

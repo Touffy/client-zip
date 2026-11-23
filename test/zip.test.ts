@@ -1,5 +1,5 @@
-import { assertEquals, assertStrictEquals } from "https://deno.land/std@0.132.0/testing/asserts.ts"
-import { Buffer } from "https://deno.land/std@0.132.0/io/buffer.ts"
+import { assertEquals, assertStrictEquals } from "@std/assert"
+import { Buffer } from "@std/io/buffer"
 import { fileHeader, fileData, dataDescriptor, centralHeader, zip64ExtraField, contentLength, flagNameUTF8 } from "../src/zip.ts"
 import type { ZipFileDescription, ZipFolderDescription } from "../src/input.ts"
 import type { Metadata } from "../src/metadata.ts"

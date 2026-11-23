@@ -1,4 +1,4 @@
-import { assertEquals, assertThrows } from "https://deno.land/std@0.132.0/testing/asserts.ts"
+import { assertEquals, assertThrows } from "@std/assert"
 import { normalizeMetadata } from "../src/metadata.ts"
 
 const encodedName = new TextEncoder().encode("test.txt")

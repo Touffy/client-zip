@@ -28,7 +28,10 @@
   "author": "David Junger <tffy@free.fr>",
   "license": "MIT",
   "devDependencies": {
-    "esbuild": "^0.25.1",
-    "terser": "~5.39"
+    "esbuild": "^0.28.2",
+    "terser": "~5.51.4"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
   }
 }

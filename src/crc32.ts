@@ -10,7 +10,7 @@ for (let i = 0; i < 256; ++i) {
 
 export function crc32(data: Uint8Array, crc = 0): number {
   crc = crc ^ -1;
-  for (var i=0, l=data.length; i<l; i++) {
+  for (let i=0, l=data.length; i<l; i++) {
       crc = crc >>> 8 ^ CRC_TABLE[crc & 0xFF ^ data[i]];
   }
   return (crc ^ -1) >>> 0;

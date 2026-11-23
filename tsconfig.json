@@ -1,12 +1,11 @@
 {
   "compilerOptions": {
-    "baseUrl": "src",
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "module": "ES2015",
     "target": "ES2020",
     "strictFunctionTypes": true,
     "noImplicitReturns": true,
-    "lib": ["WebWorker"],
+    "lib": ["WebWorker", "ES2020", "ES2023.Array"],
     "paths": {
       "*.ts": ["*"]
     }
