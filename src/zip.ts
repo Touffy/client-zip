@@ -19,6 +19,7 @@ type Zip64FieldLength = 0 | 12 | 28
 export function contentLength(files: Iterable<Omit<Metadata, 'nameIsBuffer'>>): bigint {
   let centralLength = BigInt(endLength)
   let offset = 0n
+  let fileCount = 0n
   let archiveNeedsZip64 = false
   for (const file of files) {
     if (!file.encodedName) throw new Error("Every file must have a non-empty name.")
@@ -31,10 +32,16 @@ export function contentLength(files: Iterable<Omit<Metadata, 'nameIsBuffer'>>): 
     // @ts-ignore
     centralLength += BigInt(file.encodedName.length + centralHeaderLength + (bigOffset * 12 | bigFile * 28))
     archiveNeedsZip64 ||= bigFile
+    fileCount++
   }
-  if (archiveNeedsZip64 || offset >= 0xffffffffn)
+  if (needsZip64End(archiveNeedsZip64, offset, fileCount, centralLength - BigInt(endLength)))
     centralLength += BigInt(zip64endRecordLength + zip64endLocatorLength)
   return centralLength + offset
+}
+
+// APPNOTE 4.4.1.4: a field too small for the end record means Zip64
+function needsZip64End(archiveNeedsZip64: boolean, offset: bigint, fileCount: bigint, centralSize: bigint) {
+  return archiveNeedsZip64 || offset >= 0xffffffffn || fileCount >= 0xffffn || centralSize >= 0xffffffffn
 }
 
 export function flagNameUTF8({encodedName, nameIsBuffer}: Metadata, buffersAreUTF8?: boolean) {
@@ -84,7 +91,7 @@ export async function* loadFiles(files: ForAwaitable<ZipEntryDescription & Metad
     centralSize += BigInt(record.length)
   }
 
-  if (archiveNeedsZip64 || offset >= 0xffffffffn) {
+  if (needsZip64End(archiveNeedsZip64, offset, fileCount, centralSize)) {
     const endZip64 = makeBuffer(zip64endRecordLength + zip64endLocatorLength)
     // 4.3.14 Zip64 end of central directory record
     endZip64.setUint32(0, zip64endRecordSignature)
