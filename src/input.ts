@@ -38,7 +38,7 @@ export type ZipFileDescription = {
   throw new TypeError("Unsupported input format.")
 }
 
-export function ReadableFromIterator<T extends BufferLike>(iter: AsyncIterator<T>, upstream: AsyncIterator<any> = iter) {
+export function ReadableFromIterator<T extends BufferLike>(iter: AsyncIterator<T>, upstream: AsyncIterator<unknown> = iter) {
   return new ReadableStream<Uint8Array>({
     async pull(controller) {
       let pushedSize = 0

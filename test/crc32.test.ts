@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.132.0/testing/asserts.ts"
+import { assertEquals } from "@std/assert"
 import { crc32, CRC_TABLE } from "../src/crc32.ts"
 
 const table = await Deno.readFile("./test/table.array")

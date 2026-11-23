@@ -1,8 +1,8 @@
-import { assertEquals, assertStrictEquals } from "https://deno.land/std@0.132.0/testing/asserts.ts"
-import { Buffer } from "https://deno.land/std@0.132.0/io/buffer.ts"
+import { assertEquals, assertStrictEquals } from "@std/assert"
+import { Buffer } from "@std/io/buffer"
 import { fileHeader, fileData, dataDescriptor, centralHeader, contentLength, flagNameUTF8 } from "../src/zip.ts"
 import type { ZipFileDescription } from "../src/input.ts"
-import type { Metadata } from "../src/metadata.ts";
+import type { Metadata } from "../src/metadata.ts"
 
 const BufferFromHex = (hex: string) => new Uint8Array(Array.from(hex.matchAll(/.{2}/g), ([s]) => parseInt(s, 16)))
 

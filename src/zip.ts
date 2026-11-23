@@ -1,9 +1,9 @@
 import { makeBuffer, makeUint8Array } from "./utils.ts"
 import { crc32 } from "./crc32.ts"
 import { formatDOSDateTime } from "./datetime.ts"
-import { ZipFileDescription } from "./input.ts"
-import { Metadata } from "./metadata.ts"
-import { Options } from "./index.ts"
+import type { ZipFileDescription } from "./input.ts"
+import type { Metadata } from "./metadata.ts"
+import type { Options } from "./index.ts"
 
 const fileHeaderSignature = 0x504b_0304, fileHeaderLength = 30
 const descriptorSignature = 0x504b_0708, descriptorLength = 16
@@ -11,7 +11,9 @@ const centralHeaderSignature = 0x504b_0102, centralHeaderLength = 46
 const endSignature = 0x504b_0506, endLength = 22
 const fileOverhead = descriptorLength + fileHeaderLength + centralHeaderLength
 
-export function contentLength(files: Iterable<Metadata>) {
+export type ForAwaitable<T> = AsyncIterable<T> | Iterable<T>
+
+export function contentLength(files: Iterable<Metadata>): number {
   let length = endLength
   for (const file of files) {
     if (!file.encodedName) throw new Error("Every file must have a non-empty name.")
@@ -33,7 +35,7 @@ function tryUTF8(str: Uint8Array) {
   return true
 }
 
-export async function* loadFiles(files: AsyncIterable<ZipFileDescription & Metadata>, options: Options) {
+export async function* loadFiles(files: ForAwaitable<ZipFileDescription & Metadata>, options: Options) {
   const centralRecord: Uint8Array[] = []
   let offset = 0
   let fileCount = 0

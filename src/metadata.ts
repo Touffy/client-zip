@@ -36,7 +36,7 @@ export function normalizeMetadata(input?: File | Response | BufferLike | StreamL
   return { encodedName, uncompressedSize: getUncompressedSize(input, size), nameIsBuffer }
 }
 
-function getUncompressedSize(input: any, size: number) {
+function getUncompressedSize(input: unknown, size: number) {
   if (size > -1) {
     return size;
   }
