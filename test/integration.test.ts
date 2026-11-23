@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects } from "@std/assert"
+import { assertEquals, assertRejects, assertThrows } from "@std/assert"
 import { downloadZip } from "../src/index.ts"
 
 const zipSpec = Deno.readFileSync("./test/APPNOTE.TXT")
@@ -56,4 +56,26 @@ Deno.test("downloadZip awaits asynchronous iterator cancellation", async () => {
   await reader.read()
   await assertRejects(() => reader.cancel(new Error("cancel async export")), Error, "cancel async export")
   assertEquals(finalized, true)
+})
+
+Deno.test("downloadZip refuses to predict the length of a compressed archive", () => {
+  assertThrows(() => downloadZip([], { compress: true, metadata: [] }))
+  assertThrows(() => downloadZip([], { compress: true, length: 100 }))
+})
+
+Deno.test("downloadZip writes DEFLATE entries that inflate back to the input", async () => {
+  const zip = new Uint8Array(await downloadZip([{ input: zipSpec, name: specName, lastModified: specDate }], { compress: true }).arrayBuffer())
+  const view = new DataView(zip.buffer)
+  assertEquals(view.getUint16(4, true), 20) // local header: version needed
+  assertEquals(view.getUint16(8, true), 8) // local header: DEFLATE
+  const central = zip.length - 22 - 46 - specName.length
+  assertEquals(view.getUint32(central), 0x504b0102)
+  assertEquals(view.getUint16(central + 6, true), 20)
+  assertEquals(view.getUint16(central + 10, true), 8)
+  const compressedSize = view.getUint32(central + 20, true)
+  assertEquals(view.getUint32(central + 24, true), zipSpec.length)
+  assertEquals(view.getUint32(zip.length - 6, true), central) // central directory offset
+  const data = zip.subarray(30 + specName.length, 30 + specName.length + compressedSize)
+  const inflated = await new Response(new Response(data.slice()).body!.pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer()
+  assertEquals(new Uint8Array(inflated), zipSpec)
 })

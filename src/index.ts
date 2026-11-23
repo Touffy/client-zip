@@ -29,6 +29,10 @@ export type Options = {
    * - `false`: always off (ArrayBuffers will *never* be flagged as UTF-8),
    * - `undefined`: each ArrayBuffer will be tested and flagged if it is valid UTF-8. */
   buffersAreUTF8?: boolean
+  /** Compress every file with the DEFLATE method, using the browser's `CompressionStream("deflate-raw")`.
+   * Off by default: it costs CPU time, and the archive's length can no longer be predicted,
+   * so it can't be combined with the `length` or `metadata` options. */
+  compress?: boolean
 }
 
 function normalizeArgs(file: InputWithMeta | InputWithSizeMeta | InputWithoutMeta | JustMeta) {
@@ -66,6 +70,10 @@ export const predictLength = (files: Iterable<InputWithMeta | InputWithSizeMeta 
 
 export function downloadZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta>, options: Options = {}): Response {
   const headers: Record<string, any> = { "Content-Type": "application/zip", "Content-Disposition": "attachment" }
+  if (options.compress) {
+    if (options.length || options.metadata) throw new Error("The length of a compressed archive can't be predicted.")
+    new CompressionStream("deflate-raw") // fail now if the browser can't compress
+  }
   if (Number.isInteger(options.length) && options.length! > 0) headers["Content-Length"] = options.length
   if (options.metadata) headers["Content-Length"] = predictLength(options.metadata)
   const mapped = mapFiles(files)

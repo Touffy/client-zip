@@ -29,6 +29,10 @@ type StreamLike = ReadableStream<Uint8Array> | AsyncIterable<BufferLike>
    * - `false`: always off (ArrayBuffers will *never* be flagged as UTF-8),
    * - `undefined`: each ArrayBuffer will be tested and flagged if it is valid UTF-8. */
   buffersAreUTF8?: boolean
+  /** Compress every file with the DEFLATE method, using the browser's `CompressionStream("deflate-raw")`.
+   * Off by default: it costs CPU time, and the archive's length can no longer be predicted,
+   * so it can't be combined with the `length` or `metadata` options. */
+  compress?: boolean
 } 
 
 /** Given an iterable of file metadata (or equivalent),
