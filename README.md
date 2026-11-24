@@ -83,7 +83,17 @@ Unless your list of inputs is quite small, you should prefer generators (when zi
 
 By default, client-zip stores files without compression. Set `compress: true` in the *options* argument to compress every file with the DEFLATE method, using the browser's own [`CompressionStream("deflate-raw")`](https://developer.mozilla.org/en-US/docs/Web/API/CompressionStream) (Chrome and Edge 103, Firefox 113, Safari 16.4). Files are still streamed one chunk at a time, so memory use stays flat.
 
-It is worth it for text-like files that will be stored or sent on rather than extracted right away (CSV, logs, source code, some CAD formats shrink 4 to 10 times), and a waste of CPU for files that are already compressed (images, video, PDF, Office documents). Since the compressed size is not known in advance, `compress` cannot be combined with the `length` or `metadata` options.
+It is worth it for text-like files that will be stored or sent on rather than extracted right away (CSV, logs, source code, some CAD formats shrink 4 to 10 times), and a waste of CPU for files that are already compressed (images, video, PDF, Office documents). So instead of `true`, `compress` can be a RegExp, or a list of MIME types and RegExps, for archives that mix both kinds:
+
+```js
+downloadZip(files, { compress: ["text/*", "image/svg+xml", /json/] })
+```
+
+A string matches the exact type, or every subtype when written as `"type/*"`, ignoring case and parameters such as `;charset=utf-8`. A RegExp is tested against the whole type, parameters included. A list is compiled once into a single case-insensitive RegExp. The type comes from a `File` or `Blob`'s `type` or a `Response`'s Content-Type, and strings count as `text/plain`. Buffers and streams have no type, so only `true` (or a RegExp that matches an empty string) compresses them.
+
+Each input object can also have its own `compress` property (`true` or `false`), which overrides the option for that file.
+
+Since the compressed size is not known in advance, a `compress` option that could match anything is refused together with the `length` or `metadata` options, and files that set their own `compress: true` are stored instead.
 
 ## Content-Length prediction
 

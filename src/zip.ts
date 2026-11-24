@@ -43,7 +43,7 @@ export async function* loadFiles(files: ForAwaitable<ZipFileDescription & Metada
   // write files
   for await (const file of files) {
     const flags = flagNameUTF8(file, options.buffersAreUTF8)
-    const compress = !!options.compress
+    const compress = !!file.deflate
     yield fileHeader(file, flags, compress)
     yield new Uint8Array(file.encodedName)
     yield* compress ? deflatedFileData(file) : fileData(file)

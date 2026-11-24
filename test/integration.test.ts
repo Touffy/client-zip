@@ -79,3 +79,68 @@ Deno.test("downloadZip writes DEFLATE entries that inflate back to the input", a
   const inflated = await new Response(new Response(data.slice()).body!.pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer()
   assertEquals(new Uint8Array(inflated), zipSpec)
 })
+
+async function methodsOf(response: Response) {
+  const zip = new Uint8Array(await response.arrayBuffer())
+  const view = new DataView(zip.buffer)
+  const methods: Record<string, number> = {}
+  let central = view.getUint32(zip.length - 6, true)
+  while (view.getUint32(central) === 0x504b0102) {
+    const nameLength = view.getUint16(central + 28, true)
+    const name = new TextDecoder().decode(zip.subarray(central + 46, central + 46 + nameLength))
+    methods[name] = view.getUint16(central + 10, true)
+    central += 46 + nameLength + view.getUint16(central + 30, true) + view.getUint16(central + 32, true)
+  }
+  return methods
+}
+
+Deno.test("downloadZip compresses the files whose MIME type matches the compress option", async () => {
+  const methods = await methodsOf(downloadZip([
+    new File(["text"], "plain.txt", { type: "text/plain" }),
+    { name: "upper.csv", input: new Blob(["a,b"], { type: "TEXT/CSV" }) },
+    { name: "image.png", input: new Blob([new Uint8Array(4)], { type: "image/png" }) },
+    { name: "texts.bin", input: new Blob(["x"], { type: "texts/x" }) },
+    { name: "data.json", input: new Response("{}", { headers: { "content-type": "application/json; charset=utf-8" } }) },
+    { name: "untyped.json", input: new Response("{}", { headers: { "content-type": "" } }) },
+    { name: "string.txt", input: "string" },
+    { name: "buffer.bin", input: new Uint8Array(4) },
+    { name: "stream.bin", input: new Blob(["stream"]).stream() },
+  ], { compress: ["text/*", /json/] }))
+  assertEquals(methods, {
+    "plain.txt": 8, "upper.csv": 8, "image.png": 0, "texts.bin": 0, "data.json": 8, "untyped.json": 0,
+    "string.txt": 8, "buffer.bin": 0, "stream.bin": 0,
+  })
+})
+
+Deno.test("a file's own compress property overrides the compress option", async () => {
+  const files = () => [
+    { name: "buffer.bin", input: new Uint8Array(4), compress: true },
+    { name: "page.html", input: new Blob(["<p>"], { type: "text/html" }), compress: false },
+    { name: "string.txt", input: "string" },
+  ]
+  assertEquals(await methodsOf(downloadZip(files(), { compress: ["text/*"] })), { "buffer.bin": 8, "page.html": 0, "string.txt": 8 })
+  assertEquals(await methodsOf(downloadZip(files(), { compress: true })), { "buffer.bin": 8, "page.html": 0, "string.txt": 8 })
+  assertEquals(await methodsOf(downloadZip(files())), { "buffer.bin": 8, "page.html": 0, "string.txt": 0 })
+})
+
+Deno.test("downloadZip refuses a compress option that could match when the archive's length is given", () => {
+  assertThrows(() => downloadZip([], { compress: ["text/*"], length: 100 }))
+  assertThrows(() => downloadZip([], { compress: /json/, metadata: [] }))
+  downloadZip([], { compress: false, length: 100 })
+  downloadZip([], { compress: [], length: 100 })
+})
+
+Deno.test("downloadZip stores files that ask for compression when the archive's length is given", async () => {
+  const input = [{ name: "a.bin", input: new Uint8Array(4), compress: true }]
+  assertEquals(await methodsOf(downloadZip(input, { length: 122 })), { "a.bin": 0 })
+})
+
+Deno.test("the compress option can be a single RegExp, tested against the whole MIME type", async () => {
+  const files = () => [
+    { name: "utf8.csv", input: new Blob(["a"], { type: "text/csv;charset=utf-8" }) },
+    { name: "latin1.csv", input: new Blob(["a"], { type: "text/csv;charset=iso-8859-1" }) },
+  ]
+  assertEquals(await methodsOf(downloadZip(files(), { compress: /charset=utf-8/ })), { "utf8.csv": 8, "latin1.csv": 0 })
+  assertEquals(await methodsOf(downloadZip(files(), { compress: ["TEXT/CSV"] })), { "utf8.csv": 8, "latin1.csv": 8 })
+  assertEquals(await methodsOf(downloadZip(files(), { compress: ["text/c"] })), { "utf8.csv": 0, "latin1.csv": 0 })
+})

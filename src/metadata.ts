@@ -6,6 +6,8 @@ export type Metadata = {
   uncompressedSize?: number
   /** set while writing a compressed file */
   compressedSize?: number
+  /** whether this file will be compressed (its own `compress` property, or else the `compress` option) */
+  deflate?: boolean
   /** keep track of whether the filename was supplied as a Buffer-like object */
   nameIsBuffer: boolean
 }
