@@ -34,38 +34,45 @@ export type Options = {
   buffersAreUTF8?: boolean
   /** Compress files with the DEFLATE method, using the browser's `CompressionStream("deflate-raw")`.
    * - `true`: compress every file,
-   * - an array: compress the files whose MIME type matches one of its items: a string matches the exact type
-   *   or, as `"type/*"`, every subtype; a RegExp is tested against the type. Strings count as `text/plain`;
-   *   buffers and streams have no type, so they are never matched,
+   * - a RegExp: compress the files whose MIME type (parameters included) it matches,
+   * - an array of strings and RegExps: compress the files whose MIME type matches any of them; a string matches
+   *   the exact type or, as `"type/*"`, every subtype, ignoring case and parameters such as `;charset=utf-8`.
+   *   The array is compiled into one case-insensitive RegExp.
+   *   Strings count as `text/plain`; buffers and streams have no type,
    * - `false` or `undefined` (default): store every file.
    * A file's own `compress` property overrides this option.
-   * Compression costs CPU time, and the archive's length can no longer be predicted,
-   * so it can't be combined with the `length` or `metadata` options. */
-  compress?: boolean | Array<string | RegExp>
+   * The archive's length can't be predicted when files are compressed: a `compress` option that could match
+   * anything is refused together with `length` or `metadata`, and files that ask for compression are stored. */
+  compress?: boolean | RegExp | Array<string | RegExp>
 }
 
-/** The MIME type of an input, without parameters, or "" when it has none. */
+/** The MIME type of an input, parameters included, or "" when it has none. */
 function mimeType(input: unknown): string {
-  const type = input instanceof Blob ? input.type
+  return (input instanceof Blob ? input.type
     : input instanceof Response ? input.headers.get("content-type")
-    : typeof input === "string" ? "text/plain" : ""
-  return (type || "").split(";")[0].trim().toLowerCase()
+    : typeof input === "string" ? "text/plain" : "") || ""
 }
 
-/** Whether a file should be compressed, from its own `compress` property, or else the `compress` option. */
-function shouldCompress(file: InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder, option: Options["compress"]): boolean {
-  if (file instanceof File || file instanceof Response) return matchCompress(file, option)
+const never = /(?!)/, always = /(?:)/
+
+/** Compiles the `compress` option, once, into a single RegExp that is tested against each input's MIME type. */
+function compressPattern(option: Options["compress"]): RegExp {
+  if (option instanceof RegExp) return option
+  if (!Array.isArray(option)) return option ? always : never
+  if (!option.length) return never
+  return new RegExp(option.map(pattern => `(?:${typeof pattern === "string"
+    // a string matches the whole type, or every subtype as "type/*", and stops at the parameters
+    ? `^${pattern.trim().replace(/[.*+?^${}()|[\]\\/]/g, c => c === "*" ? "[^;]*" : "\\" + c)}\\s*(?:;|$)`
+    : pattern.source})`).join("|"), "i")
+}
+
+/** Whether a file should be compressed, from its own `compress` property, or else the compiled `compress` option. */
+function shouldCompress(file: InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder, pattern: RegExp): boolean {
+  pattern.lastIndex = 0
+  if (file instanceof File || file instanceof Response) return pattern.test(mimeType(file))
   if (file.input === undefined) return false
   if (typeof file.compress === "boolean") return file.compress
-  return matchCompress(file.input, option)
-}
-
-function matchCompress(input: unknown, option: Options["compress"]): boolean {
-  if (!Array.isArray(option)) return !!option
-  const type = mimeType(input)
-  return !!type && option.some(pattern => typeof pattern === "string"
-    ? (pattern = pattern.toLowerCase()).endsWith("/*") ? type.startsWith(pattern.slice(0, -1)) : type === pattern
-    : pattern.test(type))
+  return pattern.test(mimeType(file.input))
 }
 
 function normalizeArgs(file: InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder | JustMeta) {
@@ -80,7 +87,7 @@ function* mapMeta(files: Iterable<InputWithMeta | InputWithSizeMeta | JustMeta |
   for (const file of files) yield normalizeMetadata(...normalizeArgs(file)[0])
 }
 
-function mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, options: Options) {
+function mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, pattern: RegExp | undefined) {
   // @ts-ignore TypeScript really needs to catch up
   const iterator = files[Symbol.iterator in files ? Symbol.iterator : Symbol.asyncIterator]()
   return {
@@ -90,7 +97,7 @@ function mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputW
       const [metaArgs, dataArgs] = normalizeArgs(res.value)
       // @ts-ignore type inference isn't good enough for this… yet…
       // but rewriting the code to be more explicit would make it longer
-      return { done: false, value: Object.assign(normalizeInput(...dataArgs), normalizeMetadata(...metaArgs), { sizeIsExact: isSizeExact(metaArgs[0], metaArgs[2]), deflate: shouldCompress(res.value, options.compress) }) }
+      return { done: false, value: Object.assign(normalizeInput(...dataArgs), normalizeMetadata(...metaArgs), { sizeIsExact: isSizeExact(metaArgs[0], metaArgs[2]), deflate: !!pattern && shouldCompress(res.value, pattern) }) }
     },
     throw: iterator.throw?.bind(iterator),
     [Symbol.asyncIterator]() { return this }
@@ -102,7 +109,7 @@ function mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputW
 export const predictLength = (files: Iterable<InputWithMeta | InputWithSizeMeta | JustMeta | InputFolder>): bigint => contentLength(mapMeta(files))
 
 export function downloadZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, options: Options = {}): Response {
-  if (options.compress && (options.length || options.metadata))
+  if (compressPattern(options.compress) !== never && (options.length || options.metadata))
     throw new Error("The length of a compressed archive can't be predicted.")
   const headers: Record<string, any> = { "Content-Type": "application/zip", "Content-Disposition": "attachment" }
   if ((typeof options.length === "bigint" || Number.isInteger(options.length)) && options.length! > 0) headers["Content-Length"] = String(options.length)
@@ -111,8 +118,10 @@ export function downloadZip(files: ForAwaitable<InputWithMeta | InputWithSizeMet
 }
 
 export function makeZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, options: Options = {}) {
+  const pattern = compressPattern(options.compress)
   // fail early, not in the middle of the archive, where CompressionStream or "deflate-raw" is missing
-  if (options.compress) new CompressionStream("deflate-raw")
-  const mapped = mapFiles(files, options)
+  if (pattern !== never) new CompressionStream("deflate-raw")
+  // when the archive's length is predicted, nothing is compressed, not even files that ask for it
+  const mapped = mapFiles(files, options.length || options.metadata ? undefined : pattern)
   return ReadableFromIterator(loadFiles(mapped, options), mapped);
 }

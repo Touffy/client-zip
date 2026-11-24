@@ -138,7 +138,7 @@ Deno.test("downloadZip compresses the files whose MIME type matches the compress
     { name: "buffer.bin", input: new Uint8Array(4) },
     { name: "stream.bin", input: new Blob(["stream"]).stream() },
     { name: "folder" },
-  ], { compress: ["text/*", /json$/] }))
+  ], { compress: ["text/*", /json/] }))
   assertEquals(methods, {
     "plain.txt": 8, "upper.csv": 8, "image.png": 0, "texts.bin": 0, "data.json": 8, "untyped.json": 0,
     "string.txt": 8, "buffer.bin": 0, "stream.bin": 0, "folder/": 0,
@@ -156,7 +156,24 @@ Deno.test("a file's own compress property overrides the compress option", async 
   assertEquals(await methodsOf(downloadZip(files())), { "buffer.bin": 8, "page.html": 0, "string.txt": 0 })
 })
 
-Deno.test("downloadZip refuses to compress a file when the archive's length was given", async () => {
+Deno.test("downloadZip refuses a compress option that could match when the archive's length is given", () => {
   assertThrows(() => downloadZip([], { compress: ["text/*"], length: 100 }))
-  await assertRejects(() => downloadZip([{ name: "a.bin", input: new Uint8Array(4), compress: true }], { length: 100 }).arrayBuffer())
+  assertThrows(() => downloadZip([], { compress: /json/, metadata: [] }))
+  downloadZip([], { compress: false, length: 100 })
+  downloadZip([], { compress: [], length: 100 })
+})
+
+Deno.test("downloadZip stores files that ask for compression when the archive's length is given", async () => {
+  const input = [{ name: "a.bin", input: new Uint8Array(4), compress: true }]
+  assertEquals(await methodsOf(downloadZip(input, { length: 122 })), { "a.bin": 0 })
+})
+
+Deno.test("the compress option can be a single RegExp, tested against the whole MIME type", async () => {
+  const files = () => [
+    { name: "utf8.csv", input: new Blob(["a"], { type: "text/csv;charset=utf-8" }) },
+    { name: "latin1.csv", input: new Blob(["a"], { type: "text/csv;charset=iso-8859-1" }) },
+  ]
+  assertEquals(await methodsOf(downloadZip(files(), { compress: /charset=utf-8/ })), { "utf8.csv": 8, "latin1.csv": 0 })
+  assertEquals(await methodsOf(downloadZip(files(), { compress: ["TEXT/CSV"] })), { "utf8.csv": 8, "latin1.csv": 8 })
+  assertEquals(await methodsOf(downloadZip(files(), { compress: ["text/c"] })), { "utf8.csv": 0, "latin1.csv": 0 })
 })

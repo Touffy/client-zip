@@ -34,14 +34,16 @@ type InputFolder = { name: any, lastModified?: any, input?: never, size?: never,
   buffersAreUTF8?: boolean
   /** Compress files with the DEFLATE method, using the browser's `CompressionStream("deflate-raw")`.
    * - `true`: compress every file,
-   * - an array: compress the files whose MIME type matches one of its items: a string matches the exact type
-   *   or, as `"type/*"`, every subtype; a RegExp is tested against the type. Strings count as `text/plain`;
-   *   buffers and streams have no type, so they are never matched,
+   * - a RegExp: compress the files whose MIME type (parameters included) it matches,
+   * - an array of strings and RegExps: compress the files whose MIME type matches any of them; a string matches
+   *   the exact type or, as `"type/*"`, every subtype, ignoring case and parameters such as `;charset=utf-8`.
+   *   The array is compiled into one case-insensitive RegExp.
+   *   Strings count as `text/plain`; buffers and streams have no type,
    * - `false` or `undefined` (default): store every file.
    * A file's own `compress` property overrides this option.
-   * Compression costs CPU time, and the archive's length can no longer be predicted,
-   * so it can't be combined with the `length` or `metadata` options. */
-  compress?: boolean | Array<string | RegExp>
+   * The archive's length can't be predicted when files are compressed: a `compress` option that could match
+   * anything is refused together with `length` or `metadata`, and files that ask for compression are stored. */
+  compress?: boolean | RegExp | Array<string | RegExp>
 } 
 
 /** Given an iterable of file metadata (or equivalent),
