@@ -1,17 +1,18 @@
 import "./polyfills.ts"
 import { type BufferLike, type StreamLike, normalizeInput, ReadableFromIterator } from "./input.ts"
-import { type Metadata, normalizeMetadata } from "./metadata.ts"
+import { type Metadata, normalizeMetadata, isSizeExact } from "./metadata.ts"
 import { loadFiles, contentLength, type ForAwaitable } from "./zip.ts"
+import { compressPattern, shouldCompress, never } from "./compress.ts"
 
 /** The file name, modification date and size will be read from the input;
  * extra arguments can be given to override the input’s metadata. */
-type InputWithMeta = File | Response | { input: File | Response, name?: any, lastModified?: any, size?: number | bigint, mode?: number }
+type InputWithMeta = File | Response | { input: File | Response, name?: any, lastModified?: any, size?: number | bigint, mode?: number, compress?: boolean }
 
 /** Intrinsic size, but the file name must be provided and modification date can’t be guessed. */
-type InputWithSizeMeta = { input: BufferLike, name: any, lastModified?: any, size?: number | bigint, mode?: number }
+type InputWithSizeMeta = { input: BufferLike, name: any, lastModified?: any, size?: number | bigint, mode?: number, compress?: boolean }
 
 /** The file name must be provided ; modification date and content length can’t be guessed. */
-type InputWithoutMeta = { input: StreamLike, name: any, lastModified?: any, size?: number | bigint, mode?: number }
+type InputWithoutMeta = { input: StreamLike, name: any, lastModified?: any, size?: number | bigint, mode?: number, compress?: boolean }
 
 /** The folder name must be provided ; modification date can’t be guessed. */
 type InputFolder = { name: any, lastModified?: any, input?: never, size?: never, mode?: number }
@@ -32,6 +33,18 @@ export type Options = {
    * - `false`: always off (ArrayBuffers will *never* be flagged as UTF-8),
    * - `undefined`: each ArrayBuffer will be tested and flagged if it is valid UTF-8. */
   buffersAreUTF8?: boolean
+  /** Compress files with the DEFLATE method, using the browser's `CompressionStream("deflate-raw")`.
+   * - `true`: compress every file,
+   * - a RegExp: compress the files whose MIME type (parameters included) it matches,
+   * - an array of strings and RegExps: compress the files whose MIME type matches any of them; a string matches
+   *   the exact type or, as `"type/*"`, every subtype, ignoring case and parameters such as `;charset=utf-8`.
+   *   The array is compiled into one case-insensitive RegExp.
+   *   Strings count as `text/plain`; buffers and streams have no type,
+   * - `false` or `undefined` (default): store every file.
+   * A file's own `compress` property overrides this option.
+   * The archive's length can't be predicted when files are compressed: a `compress` option that could match
+   * anything is refused together with `length` or `metadata`, and files that ask for compression are stored. */
+  compress?: boolean | RegExp | Array<string | RegExp>
 }
 
 function normalizeArgs(file: InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder | JustMeta) {
@@ -46,7 +59,7 @@ function* mapMeta(files: Iterable<InputWithMeta | InputWithSizeMeta | JustMeta |
   for (const file of files) yield normalizeMetadata(...normalizeArgs(file)[0])
 }
 
-function mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>) {
+function mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, pattern: RegExp | undefined) {
   // @ts-ignore TypeScript really needs to catch up
   const iterator = files[Symbol.iterator in files ? Symbol.iterator : Symbol.asyncIterator]()
   return {
@@ -56,7 +69,7 @@ function mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputW
       const [metaArgs, dataArgs] = normalizeArgs(res.value)
       // @ts-ignore type inference isn't good enough for this… yet…
       // but rewriting the code to be more explicit would make it longer
-      return { done: false, value: Object.assign(normalizeInput(...dataArgs), normalizeMetadata(...metaArgs)) }
+      return { done: false, value: Object.assign(normalizeInput(...dataArgs), normalizeMetadata(...metaArgs), { sizeIsExact: isSizeExact(metaArgs[0], metaArgs[2]), deflate: !!pattern && shouldCompress(res.value, pattern) }) }
     },
     throw: iterator.throw?.bind(iterator),
     [Symbol.asyncIterator]() { return this }
@@ -68,6 +81,8 @@ function mapFiles(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputW
 export const predictLength = (files: Iterable<InputWithMeta | InputWithSizeMeta | JustMeta | InputFolder>): bigint => contentLength(mapMeta(files))
 
 export function downloadZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, options: Options = {}): Response {
+  if (compressPattern(options.compress) !== never && (options.length || options.metadata))
+    throw new Error("The length of a compressed archive can't be predicted.")
   const headers: Record<string, any> = { "Content-Type": "application/zip", "Content-Disposition": "attachment" }
   if ((typeof options.length === "bigint" || Number.isInteger(options.length)) && options.length! > 0) headers["Content-Length"] = String(options.length)
   if (options.metadata) headers["Content-Length"] = String(predictLength(options.metadata))
@@ -75,6 +90,10 @@ export function downloadZip(files: ForAwaitable<InputWithMeta | InputWithSizeMet
 }
 
 export function makeZip(files: ForAwaitable<InputWithMeta | InputWithSizeMeta | InputWithoutMeta | InputFolder>, options: Options = {}) {
-  const mapped = mapFiles(files)
+  const pattern = compressPattern(options.compress)
+  // fail early, not in the middle of the archive, where CompressionStream or "deflate-raw" is missing
+  if (pattern !== never) new CompressionStream("deflate-raw")
+  // when the archive's length is predicted, nothing is compressed, not even files that ask for it
+  const mapped = mapFiles(files, options.length || options.metadata ? undefined : pattern)
   return ReadableFromIterator(loadFiles(mapped, options), mapped);
 }
