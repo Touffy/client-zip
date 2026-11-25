@@ -1,6 +1,6 @@
 import { assertEquals, assertStrictEquals } from "@std/assert"
 import { Buffer } from "@std/io/buffer"
-import { fileHeader, fileData, dataDescriptor, centralHeader, contentLength, flagNameUTF8 } from "../src/zip.ts"
+import { fileHeader, fileData, deflatedFileData, dataDescriptor, centralHeader, contentLength, flagNameUTF8 } from "../src/zip.ts"
 import type { ZipFileDescription } from "../src/input.ts"
 import type { Metadata } from "../src/metadata.ts"
 
@@ -64,6 +64,53 @@ Deno.test("the ZIP centralHeader function merges extra flags", () => {
   const offset = 0x01020304
   const actual = centralHeader(file, offset, 0x808)
   const expected = BufferFromHex("504b0102150314000808000000109a4e7856341240302010403020100b0000000000000000000000b48104030201")
+  assertEquals(actual, expected)
+})
+
+Deno.test("the ZIP fileHeader function sets the DEFLATE method for compressed files", () => {
+  const file = {...baseFile}
+  const actual = fileHeader(file, 0, true)
+  const expected = BufferFromHex("504b030414000800080000109a4e0000000000000000000000000b000000")
+  assertEquals(actual, expected)
+})
+
+Deno.test("the ZIP deflatedFileData function yields the file's data compressed with DEFLATE", async () => {
+  const file = {...baseFile}
+  const compressed = new Buffer()
+  for await (const chunk of deflatedFileData(file)) compressed.writeSync(chunk)
+  const inflated = await new Response(new Response(compressed.bytes().slice()).body!.pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer()
+  assertEquals(new Uint8Array(inflated), zipSpec)
+})
+
+Deno.test("the ZIP deflatedFileData function sets the original size and CRC, and the compressed size", async () => {
+  const file = {...baseFile}
+  const compressed = new Buffer()
+  for await (const chunk of deflatedFileData(file)) compressed.writeSync(chunk)
+  assertStrictEquals(file.uncompressedSize, zipSpec.length)
+  assertStrictEquals(file.crc, 0xbb3afe3f)
+  assertStrictEquals(file.compressedSize, compressed.length)
+  assertEquals(file.compressedSize! < file.uncompressedSize!, true)
+})
+
+Deno.test("the ZIP deflatedFileData function also compresses streams", async () => {
+  const file = {...baseFile, bytes: new Blob([zipSpec]).stream()}
+  for await (const _ of deflatedFileData(file));
+  assertStrictEquals(file.uncompressedSize, zipSpec.length)
+  assertStrictEquals(file.crc, 0xbb3afe3f)
+})
+
+Deno.test("the ZIP dataDescriptor function writes the compressed size first", () => {
+  const file = {...baseFile, uncompressedSize: 0x10203040, compressedSize: 0x01020304, crc: 0x12345678}
+  const actual = dataDescriptor(file)
+  const expected = BufferFromHex("504b0708785634120403020140302010")
+  assertEquals(actual, expected)
+})
+
+Deno.test("the ZIP centralHeader function sets the DEFLATE method and both sizes for compressed files", () => {
+  const file = {...baseFile, uncompressedSize: 0x10203040, compressedSize: 0x01020304, crc: 0x12345678}
+  const offset = 0x01020304
+  const actual = centralHeader(file, offset, 0, true)
+  const expected = BufferFromHex("504b0102150314000800080000109a4e7856341204030201403020100b0000000000000000000000b48104030201")
   assertEquals(actual, expected)
 })
 

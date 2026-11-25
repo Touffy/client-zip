@@ -43,15 +43,16 @@ export async function* loadFiles(files: ForAwaitable<ZipFileDescription & Metada
   // write files
   for await (const file of files) {
     const flags = flagNameUTF8(file, options.buffersAreUTF8)
-    yield fileHeader(file, flags)
+    const compress = !!file.deflate
+    yield fileHeader(file, flags, compress)
     yield new Uint8Array(file.encodedName)
-    yield* fileData(file)
+    yield* compress ? deflatedFileData(file) : fileData(file)
     yield dataDescriptor(file)
 
-    centralRecord.push(centralHeader(file, offset, flags))
+    centralRecord.push(centralHeader(file, offset, flags, compress))
     centralRecord.push(file.encodedName)
     fileCount++
-    offset += fileHeaderLength + descriptorLength + file.encodedName.length + file.uncompressedSize!
+    offset += fileHeaderLength + descriptorLength + file.encodedName.length + (file.compressedSize ?? file.uncompressedSize!)
   }
 
   // write central repository
@@ -73,11 +74,11 @@ export async function* loadFiles(files: ForAwaitable<ZipFileDescription & Metada
   yield makeUint8Array(end)
 }
 
-export function fileHeader(file: ZipFileDescription & Metadata, flags = 0) {
+export function fileHeader(file: ZipFileDescription & Metadata, flags = 0, compress = false) {
   const header = makeBuffer(fileHeaderLength)
   header.setUint32(0, fileHeaderSignature)
   header.setUint32(4, 0x14_00_0800 | flags) // ZIP version 2.0 | flags, bit 3 on = size and CRCs will be zero
-  // leave compression = zero (2 bytes) until we implement compression
+  if (compress) header.setUint16(8, 8, true) // compression method = DEFLATE
   formatDOSDateTime(file.modDate, header, 10)
   // leave CRC = zero (4 bytes) because we'll write it later, in the central repo
   // leave lengths = zero (2x4 bytes) because we'll write them later, in the central repo
@@ -106,24 +107,54 @@ export async function* fileData(file: ZipFileDescription & Metadata) {
   }
 }
 
+/** Like fileData, but yields the file's bytes compressed with DEFLATE,
+ * while the CRC and uncompressedSize are computed on the original bytes. */
+export async function* deflatedFileData(file: ZipFileDescription & Metadata) {
+  let { bytes } = file
+  if ("then" in bytes) bytes = await bytes
+  const source = bytes instanceof Uint8Array
+    ? new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(bytes as Uint8Array); controller.close() } })
+    : bytes
+  file.crc = 0
+  file.uncompressedSize = 0
+  file.compressedSize = 0
+  const reader = source.pipeThrough(new TransformStream({
+    transform(chunk: Uint8Array, controller) {
+      file.crc = crc32(chunk, file.crc)
+      file.uncompressedSize! += chunk.length
+      controller.enqueue(chunk)
+    }
+  })).pipeThrough(new CompressionStream("deflate-raw")).getReader()
+  try {
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      file.compressedSize += value!.length
+      yield value!
+    }
+  } finally {
+    reader.cancel()
+  }
+}
+
 export function dataDescriptor(file: ZipFileDescription & Metadata) {
   const header = makeBuffer(16)
   header.setUint32(0, descriptorSignature)
   header.setUint32(4, file.crc!, true)
-  header.setUint32(8, file.uncompressedSize!, true)
+  header.setUint32(8, file.compressedSize ?? file.uncompressedSize!, true)
   header.setUint32(12, file.uncompressedSize!, true)
   return makeUint8Array(header)
 }
 
-export function centralHeader(file: ZipFileDescription & Metadata, offset: number, flags = 0) {
+export function centralHeader(file: ZipFileDescription & Metadata, offset: number, flags = 0, compress = false) {
   const header = makeBuffer(centralHeaderLength)
   header.setUint32(0, centralHeaderSignature)
   header.setUint32(4, 0x1503_14_00) // UNIX app version 2.1 | ZIP version 2.0
   header.setUint16(8, 0x0800 | flags) // flags, bit 3 on
-  // leave compression = zero (2 bytes) until we implement compression
+  if (compress) header.setUint16(10, 8, true) // compression method = DEFLATE
   formatDOSDateTime(file.modDate, header, 12)
   header.setUint32(16, file.crc!, true)
-  header.setUint32(20, file.uncompressedSize!, true)
+  header.setUint32(20, file.compressedSize ?? file.uncompressedSize!, true)
   header.setUint32(24, file.uncompressedSize!, true)
   header.setUint16(28, file.encodedName.length, true)
   // leave extra field length = zero (2 bytes)

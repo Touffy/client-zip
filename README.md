@@ -73,11 +73,27 @@ function predictLength(metadata: Iterable<MetadataTypes>): number
   - `input`: something that contains your data; it can be a `File`, a `Blob`, a `Response`, some kind of `ArrayView` or a raw `ArrayBuffer`, a `ReadableStream<Uint8Array>` (yes, only Uint8Arrays, but most APIs give you just that type anyway), an `AsyncIterable<ArrayBuffer | ArrayView | string>`, … or just a string.
   - `mode`: override the POSIX file mode (by default, it will be `0o664`). Should be between `0` and `0o777` — disrespect that constraint at your own risk.
 
-The *options* argument currently supports three properties, `length`, `metadata` (see [Content-Length prediction](#content-length-prediction)) and `buffersAreUTF8` (see [Filename encoding](#filename-encoding)).
+The *options* argument currently supports four properties, `length`, `metadata` (see [Content-Length prediction](#content-length-prediction)), `buffersAreUTF8` (see [Filename encoding](#filename-encoding)) and `compress` (see [Compression](#compression)).
 
 The function returns a `Response` immediately. You don't need to wait for the whole ZIP to be ready. It's up to you if you want to pipe the Response somewhere (e.g. if you are using `client-zip` inside a ServiceWorker) or let the browser buffer it all in a Blob.
 
 Unless your list of inputs is quite small, you should prefer generators (when zipping Files or other resources that are already available) and async generators (when zipping Responses so you can `fetch` them lazily, or other resources that are generated last-minute so you don't need to store them longer than necessary) to provide the inputs to `downloadZip`.
+
+## Compression
+
+By default, client-zip stores files without compression. Set `compress: true` in the *options* argument to compress every file with the DEFLATE method, using the browser's own [`CompressionStream("deflate-raw")`](https://developer.mozilla.org/en-US/docs/Web/API/CompressionStream) (Chrome and Edge 103, Firefox 113, Safari 16.4). Files are still streamed one chunk at a time, so memory use stays flat.
+
+It is worth it for text-like files that will be stored or sent on rather than extracted right away (CSV, logs, source code, some CAD formats shrink 4 to 10 times), and a waste of CPU for files that are already compressed (images, video, PDF, Office documents). So instead of `true`, `compress` can be a RegExp, or a list of MIME types and RegExps, for archives that mix both kinds:
+
+```js
+downloadZip(files, { compress: ["text/*", "image/svg+xml", /json/] })
+```
+
+A string matches the exact type, or every subtype when written as `"type/*"`, ignoring case and parameters such as `;charset=utf-8`. A RegExp is tested against the whole type, parameters included. A list is compiled once into a single case-insensitive RegExp. The type comes from a `File` or `Blob`'s `type` or a `Response`'s Content-Type, and strings count as `text/plain`. Buffers and streams have no type, so only `true` (or a RegExp that matches an empty string) compresses them.
+
+Each input object can also have its own `compress` property (`true` or `false`), which overrides the option for that file.
+
+Since the compressed size is not known in advance, a `compress` option that could match anything is refused together with the `length` or `metadata` options, and files that set their own `compress: true` are stored instead.
 
 ## Content-Length prediction
 
@@ -164,7 +180,7 @@ The datasets I used in the new tests are not public domain, but nothing sensitiv
 
 # Roadmap
 
-`client-zip` does not support compression, encryption, or any extra fields and attributes, and does not produce ZIP64 files. It already meets the need that sparked its creation: combining many `fetch` responses into a one-click download for the end user (within a total 4GB limit), so I'm calling it a 1.0 anyway.
+`client-zip` does not support encryption, or any extra fields and attributes, and does not produce ZIP64 files. It already meets the need that sparked its creation: combining many `fetch` responses into a one-click download for the end user (within a total 4GB limit), so I'm calling it a 1.0 anyway.
 
 If you need a feature, you're very welcome to [open an issue](https://github.com/Touffy/client-zip/issues) or submit a pull request.
 
@@ -180,9 +196,9 @@ The most obviously useful feature, ZIP64 allows the archive to contain files lar
 
 It is implemented in [client-zip 2](https://github.com/Touffy/client-zip/tree/master).
 
-### compression
+### <del>compression</del>
 
-Limited use case. If the user is going to extract the archive just after downloading anyway, it's a waste of CPU. Implementation should be relatively easy with the new CompressionStream API. Incompatible with content-length prediction.
+Done, as an option (see [Compression](#compression)).
 
 ### encryption
 
