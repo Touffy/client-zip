@@ -2,6 +2,7 @@ import "./polyfills.ts"
 import { type BufferLike, type StreamLike, normalizeInput, ReadableFromIterator } from "./input.ts"
 import { type Metadata, normalizeMetadata } from "./metadata.ts"
 import { loadFiles, contentLength, type ForAwaitable } from "./zip.ts"
+import { compressPattern, shouldCompress, never } from "./compress.ts"
 
 /** The file name, modification date and size will be read from the input;
  * extra arguments can be given to override the input’s metadata. */
@@ -41,35 +42,6 @@ export type Options = {
    * The archive's length can't be predicted when files are compressed: a `compress` option that could match
    * anything is refused together with `length` or `metadata`, and files that ask for compression are stored. */
   compress?: boolean | RegExp | Array<string | RegExp>
-}
-
-/** The MIME type of an input, parameters included, or "" when it has none. */
-function mimeType(input: unknown): string {
-  return (input instanceof Blob ? input.type
-    : input instanceof Response ? input.headers.get("content-type")
-    : typeof input === "string" ? "text/plain" : "") || ""
-}
-
-const never = /(?!)/, always = /(?:)/
-
-/** Compiles the `compress` option, once, into a single RegExp that is tested against each input's MIME type. */
-function compressPattern(option: Options["compress"]): RegExp {
-  if (option instanceof RegExp) return option
-  if (!Array.isArray(option)) return option ? always : never
-  if (!option.length) return never
-  return new RegExp(option.map(pattern => `(?:${typeof pattern === "string"
-    // a string matches the whole type, or every subtype as "type/*", and stops at the parameters
-    ? `^${pattern.trim().replace(/[.*+?^${}()|[\]\\/]/g, c => c === "*" ? "[^;]*" : "\\" + c)}\\s*(?:;|$)`
-    : pattern.source})`).join("|"), "i")
-}
-
-/** Whether a file should be compressed, from its own `compress` property, or else the compiled `compress` option. */
-function shouldCompress(file: InputWithMeta | InputWithSizeMeta | InputWithoutMeta, pattern: RegExp): boolean {
-  pattern.lastIndex = 0
-  if (file instanceof File || file instanceof Response) return pattern.test(mimeType(file))
-  if (file.input === undefined) return false
-  if (typeof file.compress === "boolean") return file.compress
-  return pattern.test(mimeType(file.input))
 }
 
 function normalizeArgs(file: InputWithMeta | InputWithSizeMeta | InputWithoutMeta | JustMeta) {
